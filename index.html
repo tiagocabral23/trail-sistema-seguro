@@ -169,7 +169,7 @@
         <div class="sidebar-footer">
             <div id="user-info" style="color:#fbbf24;font-weight:800;margin-bottom:5px"></div>
             <button onclick="APP.logout()" style="background:0 0;border:1px solid #374151;color:#9ca3af;padding:4px;width:100%;cursor:pointer;font-weight:bold;">SAIR DO SISTEMA</button>
-            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5.1 (Seguro)</div>
+            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5.3 (Seguro)</div>
         </div>
     </aside>
 
@@ -183,7 +183,6 @@
         </header>
 
         <div class="viewport">
-            <!-- DASHBOARD -->
             <section id="tab-dashboard" class="tab-content active">
                 <div class="grid-stats">
                     <div class="card-stat"><label id="lbl-faturamento">Faturamento (Mês)</label><div id="kpi-total" class="value">R$ 0,00</div></div>
@@ -227,7 +226,6 @@
                 </div>
             </section>
 
-            <!-- MAPA -->
             <section id="tab-mapa" class="tab-content">
                 <div class="data-card" style="height: calc(100vh - 120px); margin-bottom: 0; display:flex; flex-direction:column;">
                     <div class="data-card-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -238,15 +236,11 @@
                         </div>
                     </div>
                     <div style="flex:1; padding:10px; position:relative;">
-                        <div id="map-container">
-                            <div id="map"></div>
-                            <div id="map-legend" class="map-legend"></div>
-                        </div>
+                        <div id="map-container"><div id="map"></div><div id="map-legend" class="map-legend"></div></div>
                     </div>
                 </div>
             </section>
 
-            <!-- DIRETORIA -->
             <section id="tab-diretoria" class="tab-content">
                 <div class="grid-stats">
                     <div class="card-stat" style="border-top-color:#111827"><label>Capital Imobilizado</label><div id="dir-total-stock" class="value">R$ 0,00</div></div>
@@ -259,19 +253,13 @@
                     <div class="data-card">
                         <div class="data-card-header">Mix de Vendas (Mensal)</div>
                         <div class="table-responsive">
-                            <table id="table-dir-mix">
-                                <thead><tr><th>Categoria</th><th>Qtd</th><th>Valor Total</th><th>Margem Média</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
+                            <table id="table-dir-mix"><thead><tr><th>Categoria</th><th>Qtd</th><th>Valor Total</th><th>Margem Média</th></tr></thead><tbody></tbody></table>
                         </div>
                     </div>
                     <div class="data-card">
                         <div class="data-card-header">Volume em Carteira por Vendedor</div>
                         <div class="table-responsive">
-                            <table id="table-dir-pipeline-sellers">
-                                <thead><tr><th>Vendedor</th><th>Qtd Oport.</th><th>Valor Total</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
+                            <table id="table-dir-pipeline-sellers"><thead><tr><th>Vendedor</th><th>Qtd Oport.</th><th>Valor Total</th></tr></thead><tbody></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -279,38 +267,25 @@
                 <div class="data-card">
                     <div class="data-card-header" style="background:#991b1b; color:#fff;">⚠️ Alerta: Itens Críticos em Stock (>365 dias)</div>
                     <div class="table-responsive">
-                        <table id="table-dir-critical">
-                            <thead><tr><th>Modelo</th><th>Chassi</th><th>Data Entrada</th><th>Dias</th><th>Custo</th><th>Vendedor Resp.</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                        <table id="table-dir-critical"><thead><tr><th>Modelo</th><th>Chassi</th><th>Data Entrada</th><th>Dias</th><th>Custo</th><th>Vendedor Resp.</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
             </section>
 
-            <!-- CATÁLOGO -->
             <section id="tab-vendas" class="tab-content">
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="search-catalog" onkeyup="APP.renderCatalog()" placeholder="Buscar item no catálogo..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
                 <div class="data-card">
                     <div class="data-card-header">Catálogo & Preços</div>
-                    <div class="table-responsive">
-                        <table id="table-catalog">
-                            <thead></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                    <div class="table-responsive"><table id="table-catalog"><thead></thead><tbody></tbody></table></div>
                 </div>
             </section>
 
-            <!-- AGENDA -->
             <section id="tab-agenda" class="tab-content">
-                <div class="data-card" style="padding: 15px;">
-                    <div id="agenda-content"></div>
-                </div>
+                <div class="data-card" style="padding: 15px;"><div id="agenda-content"></div></div>
             </section>
 
-            <!-- FUNIL -->
             <section id="tab-funil" class="tab-content">
                 <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items:center;">
                     <h3 style="font-weight:900;">MEU FUNIL</h3>
@@ -322,7 +297,6 @@
                 <div id="kanban-board" class="kanban-board"></div>
             </section>
 
-            <!-- CLIENTES -->
             <section id="tab-clientes" class="tab-content">
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="search-client" onkeyup="APP.renderClients()" placeholder="Buscar Cliente..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
@@ -330,15 +304,11 @@
                 </div>
                 <div class="data-card">
                     <div class="table-responsive">
-                        <table id="table-clients">
-                            <thead><tr><th>Cliente / CPF</th><th>Contato</th><th>Cidade/Obs</th><th>Total Gasto</th><th>Docs</th><th>Ação</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                        <table id="table-clients"><thead><tr><th>Cliente / CPF</th><th>Contato</th><th>Cidade/Obs</th><th>Total Gasto</th><th>Docs</th><th>Ação</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
             </section>
 
-            <!-- ESTOQUE -->
             <section id="tab-estoque" class="tab-content">
                 <div id="stock-exec-dash" class="inventory-panel-grid gestor-ctrl" style="margin-bottom: 25px;"></div>
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -350,24 +320,17 @@
                 <div class="data-card">
                     <div class="data-card-header">Disponível no Pátio</div>
                     <div class="table-responsive">
-                        <table id="table-stock">
-                            <thead><tr><th>Tipo</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Dias</th><th>Giro</th><th>Status</th><th>Ação</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                        <table id="table-stock"><thead><tr><th>Tipo</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Dias</th><th>Giro</th><th>Status</th><th>Ação</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
                 <div class="data-card" style="margin-top: 30px; border-color: #9ca3af;">
                     <div class="data-card-header" style="background: #4b5563; color: #fff;">Itens Vendidos / Arquivados</div>
                     <div class="table-responsive">
-                        <table id="table-stock-sold">
-                            <thead><tr><th>Data Venda</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Cliente</th><th>Ação</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                        <table id="table-stock-sold"><thead><tr><th>Data Venda</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Cliente</th><th>Ação</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
             </section>
 
-            <!-- RELATÓRIOS -->
             <section id="tab-relatorios" class="tab-content">
                 <div class="filter-bar">
                     <div class="filter-group"><label>Data Início</label><input type="date" id="rep-start"></div>
@@ -375,20 +338,12 @@
                     <div class="filter-group">
                         <label>Origem</label>
                         <select id="rep-source">
-                            <option value="all">Todas</option>
-                            <option value="Loja/Passante">Loja / Passante</option>
-                            <option value="Indicacao">Indicação</option>
-                            <option value="Visita">Visita</option>
-                            <option value="Instagram">Instagram / Facebook</option>
-                            <option value="Google">Google / Site</option>
-                            <option value="Feira">Feira / Evento</option>
-                            <option value="Outros">Outros</option>
+                            <option value="all">Todas</option><option value="Loja/Passante">Loja / Passante</option><option value="Indicacao">Indicação</option>
+                            <option value="Visita">Visita</option><option value="Instagram">Instagram / Facebook</option><option value="Google">Google / Site</option>
+                            <option value="Feira">Feira / Evento</option><option value="Outros">Outros</option>
                         </select>
                     </div>
-                    <div class="filter-group gestor-ctrl">
-                        <label>Vendedor</label>
-                        <select id="rep-seller"><option value="all">Todos</option></select>
-                    </div>
+                    <div class="filter-group gestor-ctrl"><label>Vendedor</label><select id="rep-seller"><option value="all">Todos</option></select></div>
                     <button class="btn btn-main" onclick="APP.renderReports()">Filtrar</button>
                     <button class="btn btn-dark" onclick="window.print()">🖨️ Imprimir</button>
                 </div>
@@ -399,25 +354,18 @@
                 <div class="data-card">
                     <div class="data-card-header">Detalhamento de Vendas</div>
                     <div class="table-responsive">
-                        <table id="table-reports">
-                            <thead><tr><th>Data</th><th>Cliente</th><th>Origem</th><th>Vendedor</th><th>Produto/Serviço</th><th>Valor</th><th>Margem</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
+                        <table id="table-reports"><thead><tr><th>Data</th><th>Cliente</th><th>Origem</th><th>Vendedor</th><th>Produto/Serviço</th><th>Valor</th><th>Margem</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
             </section>
 
-            <!-- EQUIPE -->
             <section id="tab-equipe" class="tab-content">
                 <div style="background:#fff3cd; color:#856404; padding:15px; border-radius:6px; margin-bottom:15px; font-size:12px;">
                     <strong>Atenção Gestor:</strong> Crie a conta do vendedor no painel Auth do Supabase e depois cole o UID gerado abaixo para configurar o perfil dele aqui.
                 </div>
                 <button onclick="APP.prepareUser()" class="btn btn-main admin-only" style="margin-bottom:15px;">+ Novo Perfil da Equipe</button>
                 <div class="data-card">
-                    <table id="table-users">
-                        <thead><tr><th>Nome</th><th>Função</th><th>Supabase UID (Auth)</th><th>Meta (Mês)</th><th>Ação</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                    <table id="table-users"><thead><tr><th>Nome</th><th>Função</th><th>Supabase UID (Auth)</th><th>Meta (Mês)</th><th>Ação</th></tr></thead><tbody></tbody></table>
                 </div>
             </section>
         </div>
@@ -429,31 +377,12 @@
             <h3>Detalhes da Oportunidade</h3>
             <form onsubmit="APP.saveDeal(event)">
                 <input type="hidden" id="deal-id">
-                <div class="form-item" id="div-deal-owner" style="display:none;">
-                    <label>Responsável (Vendedor)</label>
-                    <select id="deal-owner" style="background:#fefce8; border-color:#f59e0b;"></select>
-                </div>
-                <div class="form-item">
-                    <label>Cliente</label>
-                    <input id="deal-client" list="list-clients" required placeholder="Digite ou selecione...">
-                    <datalist id="list-clients"></datalist>
-                </div>
-                <div class="form-item">
-                    <label>Cidade / Local (Mapa)</label>
-                    <input id="deal-city" list="list-cities-mg" placeholder="Selecione a cidade...">
-                    <datalist id="list-cities-mg"></datalist>
-                </div>
+                <div class="form-item" id="div-deal-owner" style="display:none;"><label>Responsável (Vendedor)</label><select id="deal-owner" style="background:#fefce8; border-color:#f59e0b;"></select></div>
+                <div class="form-item"><label>Cliente</label><input id="deal-client" list="list-clients" required placeholder="Digite ou selecione..."><datalist id="list-clients"></datalist></div>
+                <div class="form-item"><label>Cidade / Local (Mapa)</label><input id="deal-city" list="list-cities-mg" placeholder="Selecione a cidade..."><datalist id="list-cities-mg"></datalist></div>
                 <div class="form-item">
                     <label>Origem do Lead</label>
-                    <select id="deal-source">
-                        <option value="Loja/Passante">Loja / Passante</option>
-                        <option value="Indicacao">Indicação</option>
-                        <option value="Visita">Visita</option>
-                        <option value="Instagram">Instagram / Facebook</option>
-                        <option value="Google">Google / Site</option>
-                        <option value="Feira">Feira / Evento</option>
-                        <option value="Outros">Outros</option>
-                    </select>
+                    <select id="deal-source"><option value="Loja/Passante">Loja / Passante</option><option value="Indicacao">Indicação</option><option value="Visita">Visita</option><option value="Instagram">Instagram / Facebook</option><option value="Google">Google / Site</option><option value="Feira">Feira / Evento</option><option value="Outros">Outros</option></select>
                 </div>
                 <div class="form-item"><label>Valor (R$)</label><input id="deal-value" required oninput="APP.maskMoney(this)"></div>
                 <div class="form-item"><label>Tipo</label><select id="deal-type" onchange="APP.toggleStock()"><option value="maquina">Máquina</option><option value="consorcio">Consórcio</option></select></div>
@@ -578,7 +507,6 @@
                 }
 
                 dbClient.auth.onAuthStateChange((event, session) => {
-                    // Evitar recarregamentos infinitos: se estiver desligado, apenas exibe a sobreposição.
                     if (event === 'SIGNED_OUT') {
                         APP.user = null;
                         document.getElementById('user-overlay').style.display = 'flex';
@@ -606,19 +534,24 @@
 
             loadUser: async (authUser) => {
                 try {
-                    const { data: profile, error } = await dbClient.from('users').select('*').eq('auth_id', authUser.id).maybeSingle();
+                    // CORREÇÃO: Usar apenas a lista (Array) e apanhar o primeiro elemento 
+                    // para evitar o erro "multiple rows returned" se houver perfis duplicados no banco
+                    const { data: profiles, error } = await dbClient.from('users').select('*').eq('auth_id', authUser.id);
                     
                     if (error) {
-                        alert("Erro de segurança no banco de dados. O Script SQL não foi configurado corretamente. Erro: " + error.message);
+                        alert("Erro ao verificar utilizador. Detalhe: " + error.message);
                         await dbClient.auth.signOut();
                         return;
                     }
 
-                    if (!profile) {
-                        alert("Seu e-mail está autorizado, mas o Gestor ainda não adicionou o seu perfil com a chave UID correta na aba Equipe.");
+                    if (!profiles || profiles.length === 0) {
+                        alert("Seu e-mail está autorizado, mas o seu perfil não foi encontrado na aba Equipe. Peça ao Gestor para associar o seu UID.");
                         await dbClient.auth.signOut();
                         return;
                     }
+
+                    // Se houver perfis duplicados com o mesmo UID, agarra apenas o primeiro de forma segura
+                    const profile = profiles[0];
 
                     APP.user = profile;
                     document.getElementById('user-overlay').style.display = 'none';
@@ -655,6 +588,18 @@
                     dbClient.from('clients').select('*')
                 ]);
                 
+                // Aviso visual de bloqueio RLS para facilitar a deteção de problemas
+                let errorMsgs = [];
+                if (u.error) errorMsgs.push("Tabela Equipe: " + u.error.message);
+                if (s.error) errorMsgs.push("Tabela Estoque: " + s.error.message);
+                if (d.error) errorMsgs.push("Tabela Negócios: " + d.error.message);
+                if (c.error) errorMsgs.push("Tabela Clientes: " + c.error.message);
+
+                if (errorMsgs.length > 0) {
+                    alert("O sistema detetou que a leitura de algumas tabelas está a ser bloqueada pelo Supabase. Detalhes na consola (F12).");
+                    console.error("Bloqueios de leitura RLS:", errorMsgs);
+                }
+
                 APP.data.users = u.data || [];
                 APP.data.stock = s.data || [];
                 APP.data.deals = d.data || [];
@@ -668,7 +613,20 @@
                 if(isG && filter) {
                     filter.style.display = 'block'; filter.innerHTML = '<option value="all">Ver Todos os Vendedores</option>'; 
                     selFilter.innerHTML = '<option value="all">Todos</option>';
-                    APP.data.users.forEach(u => { const opt = `<option value="${u.name}">${u.name}</option>`; filter.innerHTML+=opt; selFilter.innerHTML+=opt; });
+                    
+                    // Remover duplicados da lista suspensa caso existam
+                    const uniqueUsers = [];
+                    APP.data.users.forEach(u => {
+                        if (!uniqueUsers.find(x => x.name === u.name)) {
+                            uniqueUsers.push(u);
+                        }
+                    });
+
+                    uniqueUsers.forEach(u => { 
+                        const opt = `<option value="${u.name}">${u.name}</option>`; 
+                        filter.innerHTML+=opt; 
+                        selFilter.innerHTML+=opt; 
+                    });
                 }
 
                 const now = new Date();
@@ -829,8 +787,7 @@
                     list.ondrop = async (e) => {
                         e.preventDefault(); div.classList.remove('drag-over');
                         if (APP.dragId) {
-                            // Correção de erro na arrastagem do cartão: atualiza o stage com histórico adequado
-                            await APP.updateStage(APP.dragId, col.id);
+                            await dbClient.from('deals').update({stage: col.id}).eq('id', APP.dragId);
                             APP.dragId = null;
                         }
                     };
@@ -855,7 +812,13 @@
 
                 if (isGestorOrAssistente) {
                     ownerDiv.style.display = 'block';
-                    ownerSelect.innerHTML = APP.data.users.filter(u => u.role !== 'diretoria_restrita').map(u => `<option value="${u.name}" ${u.name === APP.user.name ? 'selected' : ''}>${u.name}</option>`).join('');
+                    
+                    const uniqueUsers = [];
+                    APP.data.users.filter(u => u.role !== 'diretoria_restrita').forEach(u => {
+                        if (!uniqueUsers.find(x => x.name === u.name)) uniqueUsers.push(u);
+                    });
+
+                    ownerSelect.innerHTML = uniqueUsers.map(u => `<option value="${u.name}" ${u.name === APP.user.name ? 'selected' : ''}>${u.name}</option>`).join('');
                 } else {
                     ownerDiv.style.display = 'none';
                     ownerSelect.innerHTML = `<option value="${APP.user.name}" selected>${APP.user.name}</option>`;
@@ -1104,7 +1067,16 @@
                 const term = document.getElementById('search-client').value.toLowerCase();
                 const tbody = document.querySelector('#table-clients tbody');
                 if(!tbody) return;
-                tbody.innerHTML = APP.data.clients.filter(c=>c.name.toLowerCase().includes(term)).map(c => {
+                
+                // Mostrar apenas um cliente por nome para evitar repetições
+                const uniqueClients = [];
+                APP.data.clients.forEach(c => {
+                    if (!uniqueClients.find(x => x.name === c.name)) {
+                        uniqueClients.push(c);
+                    }
+                });
+
+                tbody.innerHTML = uniqueClients.filter(c=>c.name.toLowerCase().includes(term)).map(c => {
                     const totalSpent = APP.data.deals.filter(d => d.client === c.name && d.stage === 'ganho').reduce((a, b) => a + b.value, 0);
                     const docHtml = c.doc_link ? `<a href="${c.doc_link}" target="_blank" class="btn btn-small btn-dark">📂 Drive</a>` : '-';
                     return `<tr><td><b>${c.name}</b><br><small style="color:#6b7280">${c.cpf_cnpj||''}</small></td><td>${c.phone||'-'} ${c.phone?`<a href="#" onclick="APP.openWhatsapp('${c.phone}')" class="btn-whatsapp">Zap</a>`:''}<br><small>${c.email||''}</small></td><td>${c.obs||'-'}</td><td><span style="color:#059669; font-weight:800;">${totalSpent.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></td><td>${docHtml}</td><td><button onclick="APP.editClient('${c.id}')" class="btn btn-small btn-main">✏️</button> <button onclick="APP.deleteClient('${c.id}')" class="btn btn-small btn-danger">×</button></td></tr>`;
@@ -1124,12 +1096,19 @@
             renderUsers: () => {
                 const tbody = document.querySelector('#table-users tbody'); if(!tbody) return;
                 const isG = APP.user.role === 'gestor';
-                tbody.innerHTML = APP.data.users.map(u => `<tr><td>${u.name}</td><td>${u.role}</td><td><small style="color:#9ca3af">${u.auth_id||'-'}</small></td><td>${u.goal?u.goal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'-'}</td><td>${isG?`<button onclick="APP.editUser('${u.id}')" class="btn btn-small btn-main">✏️</button>`:''}</td></tr>`).join('');
+                
+                // Mostrar apenas um usuário por nome
+                const uniqueUsers = [];
+                APP.data.users.forEach(u => {
+                    if (!uniqueUsers.find(x => x.name === u.name)) uniqueUsers.push(u);
+                });
+
+                tbody.innerHTML = uniqueUsers.map(u => `<tr><td>${u.name}</td><td>${u.role}</td><td><small style="color:#9ca3af">${u.auth_id||'-'}</small></td><td>${u.goal?u.goal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'-'}</td><td>${isG?`<button onclick="APP.editUser('${u.id}')" class="btn btn-small btn-main">✏️</button>`:''}</td></tr>`).join('');
                 
                 const tbPerf = document.querySelector('#table-performance tbody');
                 if (tbPerf) {
                     let ranking = [];
-                    tbPerf.innerHTML = APP.data.users.map(u => {
+                    tbPerf.innerHTML = uniqueUsers.map(u => {
                         const userDeals = APP.data.deals.filter(d => d.owner === u.name);
                         const open = userDeals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido').length;
                         const wonDeals = userDeals.filter(d => d.stage === 'ganho');
@@ -1326,10 +1305,16 @@
 
             renderGoals: () => {
                 const container = document.getElementById('goals-container'); if(!container) return;
-                const sellers = APP.data.users.filter(u => u.role === 'vendedor' && u.goal > 0);
-                if (sellers.length === 0) { container.innerHTML = '<div style="color:#6b7280; font-size:12px;">Nenhuma meta definida.</div>'; return; }
+                
+                // Mostrar apenas uma meta por vendedor na equipa
+                const uniqueSellers = [];
+                APP.data.users.filter(u => u.role === 'vendedor' && u.goal > 0).forEach(u => {
+                    if (!uniqueSellers.find(x => x.name === u.name)) uniqueSellers.push(u);
+                });
+
+                if (uniqueSellers.length === 0) { container.innerHTML = '<div style="color:#6b7280; font-size:12px;">Nenhuma meta definida.</div>'; return; }
                 const cm = new Date().getMonth(); const cy = new Date().getFullYear();
-                container.innerHTML = sellers.map(u => {
+                container.innerHTML = uniqueSellers.map(u => {
                     const currentSales = APP.data.deals.filter(d => d.owner === u.name && d.stage === 'ganho' && d.close_date && new Date(d.close_date).getMonth() === cm && new Date(d.close_date).getFullYear() === cy).reduce((a, b) => a + b.value, 0);
                     const pct = Math.min((currentSales / u.goal) * 100, 100); 
                     let color = '#ef4444'; if (pct > 50) color = '#eab308'; if (pct >= 100) color = '#10b981'; 
