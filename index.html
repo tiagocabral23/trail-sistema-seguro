@@ -169,7 +169,7 @@
         <div class="sidebar-footer">
             <div id="user-info" style="color:#fbbf24;font-weight:800;margin-bottom:5px"></div>
             <button onclick="APP.logout()" style="background:0 0;border:1px solid #374151;color:#9ca3af;padding:4px;width:100%;cursor:pointer;font-weight:bold;">SAIR DO SISTEMA</button>
-            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5 (Seguro)</div>
+            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5.1 (Seguro)</div>
         </div>
     </aside>
 
@@ -179,7 +179,7 @@
                 <button class="btn-hamburger" onclick="APP.toggleMenu()">☰</button>
                 <h2 id="page-title">DASHBOARD</h2>
             </div>
-            <button id="btn-global-backup" onclick="APP.exportData()" class="btn btn-dark" style="font-size:10px;">💾 Backup Excel</button>
+            <button onclick="APP.exportData()" class="btn btn-dark" style="font-size:10px;">💾 Backup Excel</button>
         </header>
 
         <div class="viewport">
@@ -550,13 +550,11 @@
         var SUPABASE_URL = 'https://igvdhpzzjamoyetxickb.supabase.co';
         var SUPABASE_KEY = 'sb_publishable_mXmrR5peC1mICxxMxjDKrg_2NJUZG0Q';
         
-        // Uso de 'var' e renomeação para 'dbClient' evita completamente erros de redeclaração (hot-reload / iframe)
         var dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         var salesChart = null;
         var mixChart = null;
 
-        // CIDADES DO NORTE DE MINAS
         var MG_CITIES_COORDS = {
             "Águas Vermelhas": [-15.74, -41.46], "Bocaiúva": [-17.10, -43.81], "Brasília de Minas": [-16.20, -44.43], "Capitão Enéas": [-16.32, -43.70],
             "Coração de Jesus": [-16.68, -44.36], "Espinosa": [-14.92, -42.81], "Francisco Sá": [-16.47, -43.48], "Grão Mogol": [-16.56, -42.89],
@@ -579,8 +577,12 @@
                     document.getElementById('user-overlay').style.display = 'flex';
                 }
 
-                dbClient.auth.onAuthStateChange(async (event, session) => {
-                    if (event === 'SIGNED_OUT' || !session) location.reload();
+                dbClient.auth.onAuthStateChange((event, session) => {
+                    // Evitar recarregamentos infinitos: se estiver desligado, apenas exibe a sobreposição.
+                    if (event === 'SIGNED_OUT') {
+                        APP.user = null;
+                        document.getElementById('user-overlay').style.display = 'flex';
+                    }
                 });
             },
 
@@ -599,7 +601,6 @@
                     return;
                 }
                 
-                // Força um pequeno delay para garantir que o supabase crie o cookie corretamente
                 setTimeout(() => APP.loadUser(data.user), 500);
             },
 
@@ -625,7 +626,6 @@
                     
                     APP.applyPermissions();
                     await APP.loadAll();
-                    if (APP.user.role === 'diretoria_restrita') APP.nav('diretoria');
                 } catch (e) {
                     console.error("Falha ao carregar perfil:", e);
                 }
@@ -634,14 +634,13 @@
             applyPermissions: () => {
                 const isG = APP.user.role === 'gestor' || APP.user.role === 'assistente';
                 const isDir = APP.user.role === 'diretoria_restrita';
-                const backupBtn = document.getElementById('btn-global-backup');
 
                 if (isDir) {
                     document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'none');
                     document.getElementById('btn-diretoria').style.display = 'flex';
-                    if (backupBtn) backupBtn.style.display = 'none';
+                    document.getElementById('btn-global-backup').style.display = 'none';
                 } else {
-                    if (backupBtn) backupBtn.style.display = 'inline-flex';
+                    document.getElementById('btn-global-backup').style.display = 'inline-flex';
                     document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'flex');
                     document.querySelectorAll('.gestor-ctrl').forEach(el => el.style.display = isG ? 'flex' : 'none');
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = APP.user.role === 'gestor' ? 'flex' : 'none');
@@ -680,7 +679,6 @@
 
                 APP.renderAll();
                 
-                // Listeners de Realtime
                 dbClient.channel('custom-all-channel')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, () => APP.reloadTable('deals'))
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, () => APP.reloadTable('stock'))
@@ -749,7 +747,6 @@
                 APP.renderDiretoria();
             },
 
-            // --- FUNIL / KANBAN ---
             renderKanban: () => {
                 if(!APP.user) return;
                 const cols = [{id:'prospeccao',l:'Prospecção',c:'#3b82f6'},{id:'analise_credito',l:'Análise Crédito',c:'#0ea5e9'},{id:'documentacao',l:'Documentação',c:'#eab308'},{id:'contrato',l:'Contrato',c:'#f97316'},{id:'af',l:'A.F. Final',c:'#8b5cf6'},{id:'ganho',l:'Ganho',c:'#10b981'},{id:'perdido',l:'Perdido',c:'#374151'}];
@@ -776,7 +773,6 @@
                     const list = div.querySelector('.kanban-list');
                     
                     items.forEach(d => {
-                        // Alerta de Estagnação
                         let stagnantClass = '';
                         let lastActionDate = new Date(d.created_at).getTime();
                         if (d.history && d.history.length > 0) {
@@ -833,9 +829,9 @@
                     list.ondrop = async (e) => {
                         e.preventDefault(); div.classList.remove('drag-over');
                         if (APP.dragId) {
-                            const draggedId = APP.dragId;
+                            // Correção de erro na arrastagem do cartão: atualiza o stage com histórico adequado
+                            await APP.updateStage(APP.dragId, col.id);
                             APP.dragId = null;
-                            await APP.updateStage(draggedId, col.id);
                         }
                     };
                 });
@@ -1063,7 +1059,6 @@
                 tbody.innerHTML = html || '<tr><td colspan="8">Nada encontrado.</td></tr>';
                 if(tbodySold) tbodySold.innerHTML = htmlSold || '<tr><td colspan="6">Nada encontrado.</td></tr>';
 
-                // Dashboard Estoque
                 const execDash = document.getElementById('stock-exec-dash');
                 if (execDash && (isGestor || isAssistente)) {
                     const avail = APP.data.stock.filter(s => s.status !== 'Vendido');
@@ -1396,6 +1391,10 @@
             },
 
             // --- UTILS ---
+            logout: async () => { 
+                await dbClient.auth.signOut(); 
+                window.location.reload(); 
+            },
             modal: (id) => document.getElementById(id).classList.add('active'),
             closeModals: () => { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); document.querySelectorAll('form').forEach(f => f.reset()); },
             toast: (m) => { const t=document.getElementById('toast'); t.innerText=m; t.style.opacity=1; setTimeout(()=>t.style.opacity=0,2000); },
@@ -1404,81 +1403,6 @@
             maskMoney: (i) => { let v=i.value.replace(/\D/g,''); v=(v/100).toFixed(2).replace(".",",").replace(/(\d)(?=(\d{3})+(?!\d))/g,"$1."); i.value=v; },
             inputPhone: (i) => { let v=i.value.replace(/\D/g,""); v=v.replace(/^(\d{2})(\d)/,"($1) $2"); v=v.replace(/(\d)(\d{4})$/,"$1-$2"); i.value=v; },
             openWhatsapp: (phone) => { if(!phone) return alert('Sem telefone'); window.open(`https://wa.me/55${phone.replace(/\D/g, '')}`, '_blank'); },
-            toggleMenu: () => document.getElementById('sidebar').classList.toggle('open'),
-            logout: async () => {
-                const { error } = await dbClient.auth.signOut();
-                if (error) return alert('Erro ao sair: ' + error.message);
-                location.reload();
-            },
-            refreshLocal: (table, record) => {
-                if (!APP.data[table]) APP.data[table] = [];
-                const idx = APP.data[table].findIndex(x => String(x.id) === String(record.id));
-                if (idx >= 0) APP.data[table][idx] = record;
-                else APP.data[table].push(record);
-                if (table === 'deals') APP.syncStockStatus();
-                APP.renderAll();
-            },
-            addLog: (item, action, detail) => {
-                const history = Array.isArray(item?.history) ? [...item.history] : [];
-                history.push({ date: Date.now(), user: APP.user?.name || 'Sistema', action, detail });
-                return history;
-            },
-            importStock: async (event) => {
-                try {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    const buffer = await file.arrayBuffer();
-                    const workbook = XLSX.read(buffer, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-                    if (!rows.length) {
-                        APP.toast('Arquivo vazio.');
-                        event.target.value = '';
-                        return;
-                    }
-
-                    const norm = (v) => String(v || '').trim().toLowerCase();
-                    const pick = (row, keys) => {
-                        const found = Object.keys(row).find(k => keys.includes(norm(k)));
-                        return found ? row[found] : '';
-                    };
-
-                    const payload = rows.map(row => {
-                        const type = pick(row, ['tipo', 'type']) || 'Outros';
-                        const model = pick(row, ['modelo', 'model']);
-                        const mono = pick(row, ['chassi', 'chassis', 'série', 'serie', 'mono', 'serial']);
-                        const cost = APP.parseMoney(pick(row, ['custo', 'cost', 'valor', 'preco', 'preço']));
-                        const status = pick(row, ['status']) || 'Disponível';
-                        const dateEntryRaw = pick(row, ['data entrada', 'data_entrada', 'date_entry', 'entrada']);
-                        const dateEntry = dateEntryRaw ? new Date(dateEntryRaw).toISOString() : new Date().toISOString();
-                        return {
-                            type,
-                            model,
-                            mono,
-                            cost,
-                            status,
-                            date_entry: dateEntry,
-                            history: [{ date: Date.now(), user: APP.user?.name || 'Sistema', action: 'Importação', detail: `Arquivo: ${file.name}` }]
-                        };
-                    }).filter(item => item.model && item.cost >= 0);
-
-                    if (!payload.length) {
-                        APP.toast('Nenhuma linha válida para importar.');
-                        event.target.value = '';
-                        return;
-                    }
-
-                    const { error } = await dbClient.from('stock').insert(payload);
-                    if (error) throw error;
-                    APP.toast(`${payload.length} item(ns) importado(s)!`);
-                    event.target.value = '';
-                    setTimeout(() => APP.reloadTable('stock'), 500);
-                } catch (err) {
-                    console.error(err);
-                    alert('Erro ao importar estoque: ' + err.message);
-                    event.target.value = '';
-                }
-            },
             exportData: () => { const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.stock),"Estoque"); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.deals),"Negócios"); XLSX.writeFile(wb,"Backup.xlsx"); }
         };
 
