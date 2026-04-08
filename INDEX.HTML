@@ -1,0 +1,1007 @@
+<!DOCTYPE html><html lang="pt-br"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111827">
+    <title>TRAIL SYSTEM v4.5 | Seguro & Realtime</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <style>
+        /* ESTILOS GERAIS */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; color: #1f2937; display: flex; height: 100vh; overflow: hidden; }
+
+        /* MENU LATERAL */
+        #sidebar { width: 260px; background-color: #111827; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.3s ease; z-index: 1000; }
+        .brand { padding: 25px; text-align: center; background: #000; border-bottom: 2px solid #fbbf24; display: flex; justify-content: space-between; align-items: center; }
+        .brand h1 { color: #fbbf24; font-size: 20px; font-weight: 900; font-style: italic; letter-spacing: 1px; margin: 0 auto; }
+        .nav-menu { flex: 1; padding: 20px 0; overflow-y: auto; }
+        .nav-item { width: 100%; padding: 15px 25px; background: transparent; border: none; color: #9ca3af; text-align: left; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; text-transform: uppercase; transition: 0.2s; }
+        .nav-item:hover { background-color: #1f2937; color: #fff; }
+        .nav-item.active { background-color: #fbbf24; color: #000; border-right: 4px solid #b45309; }
+        .sidebar-footer { padding: 20px; text-align: center; font-size: 11px; color: #6b7280; border-top: 1px solid #1f2937; background: #0f172a; }
+        .btn-close-sidebar { display: none; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+        .btn-hamburger { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #1f2937; margin-right: 15px; }
+
+        /* ÁREA PRINCIPAL */
+        #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; }
+        header { height: 60px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .header-left { display: flex; align-items: center; }
+        .viewport { flex: 1; padding: 20px; overflow-y: auto; background: #f3f4f6; }
+        .tab-content { display: none; animation: fadeIn 0.3s; height: 100%; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* MAPA */
+        #map-container { height: 100%; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        .map-legend { position: absolute; bottom: 20px; right: 20px; background: white; padding: 10px; border-radius: 8px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-height: 200px; overflow-y: auto; font-size: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; }
+        .map-toggle-group { display: flex; background: #e5e7eb; padding: 3px; border-radius: 6px; }
+        .btn-map-toggle { padding: 4px 10px; border: none; border-radius: 4px; font-size: 10px; font-weight: 800; cursor: pointer; background: transparent; color: #4b5563; transition: 0.2s; }
+        .btn-map-toggle.active { background: #fff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* CARDS */
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card-stat { background: #fff; padding: 15px 20px; border-radius: 10px; border: 1px solid #e5e7eb; border-top: 4px solid #fbbf24; }
+        .card-stat label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #6b7280; margin-bottom: 5px; }
+        .card-stat .value { font-size: 20px; font-weight: 900; color: #111827; }
+
+        .inventory-panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .inv-card { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; position: relative; overflow: hidden;}
+        .inv-card.critical { border-color: #ef4444; background: #fff5f5; border-top: 4px solid #ef4444; }
+        .inv-card.dispute { border-color: #f59e0b; background: #fffbeb; border-top: 4px solid #f59e0b; }
+        .inv-card.reserved { border-color: #7c3aed; background: #f5f3ff; border-top: 4px solid #7c3aed; }
+        .inv-label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #6b7280; margin-bottom: 5px; }
+        .inv-value { font-size: 18px; font-weight: 900; color: #111827; }
+        .inv-card.critical .inv-value { color: #991b1b; }
+        .inv-card.dispute .inv-value { color: #b45309; }
+        .inv-card.reserved .inv-value { color: #5b21b6; }
+
+        /* TABELAS */
+        .data-card { background: #fff; border-radius: 10px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 20px; }
+        .data-card-header { background: #1f2937; color: #fbbf24; padding: 10px 15px; font-weight: 800; text-transform: uppercase; font-size: 11px; }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { padding: 10px 15px; font-size: 10px; text-transform: uppercase; background: #f9fafb; color: #4b5563; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        td { padding: 10px 15px; font-size: 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+
+        .ranking-row { display: flex; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #f3f4f6; align-items: center; }
+        .ranking-pos { font-weight: 900; font-size: 14px; color: #fbbf24; background: #1f2937; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
+        .ranking-name { font-weight: 700; font-size: 12px; }
+        .ranking-val { font-weight: 800; font-size: 12px; color: #059669; }
+
+        /* KANBAN */
+        .kanban-board { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; height: calc(100vh - 200px); align-items: flex-start; }
+        .kanban-col { background: #e5e7eb; min-width: 280px; max-width: 280px; border-radius: 8px; display: flex; flex-direction: column; max-height: 100%; transition: background 0.3s; border: 2px solid transparent; }
+        .kanban-col.drag-over { background: #d1d5db; border-color: #9ca3af; border-style: dashed; }
+        .kanban-header { padding: 10px 15px; font-weight: 800; text-transform: uppercase; font-size: 11px; border-radius: 8px 8px 0 0; display: flex; flex-direction: column; gap: 2px; color: #fff; }
+        .kanban-header-total { font-size: 10px; opacity: 0.9; font-weight: 600; }
+        .kanban-list { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 100px; }
+        .card { background: #fff; padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #111827; cursor: grab; font-size: 12px; transition: transform 0.2s; position: relative; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); border-left-color: #fbbf24; }
+        .card:active { cursor: grabbing; }
+        .card.dragging { opacity: 0.5; transform: rotate(2deg); }
+        .card-tags { display: flex; gap: 5px; margin-bottom: 5px; justify-content: space-between; align-items: center;}
+        .tag { padding: 2px 5px; background: #f3f4f6; border-radius: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+        .card-action { margin-top: 8px; font-size: 10px; background: #eff6ff; color: #1e40af; padding: 4px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+        .card.stagnant { border-color: #ef4444; background: #fff5f5; }
+        .card.stagnant::after { content: '🕸️'; position: absolute; top: 5px; right: 5px; font-size: 14px; opacity: 0.5; }
+
+        .card-btn-group { display: flex; gap: 3px; }
+        .btn-card-icon { background: transparent; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 10px; color: #6b7280; transition:0.2s; }
+        .btn-card-icon:hover { background: #fbbf24; border-color: #d97706; color: #000; }
+        .btn-card-delete:hover { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+
+        /* BOTOES E MODAIS */
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 700; font-size: 11px; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-main { background: #fbbf24; color: #000; }
+        .btn-dark { background: #1f2937; color: #fbbf24; }
+        .btn-small { padding: 4px 8px; font-size: 10px; }
+        .btn-danger { background: #fee2e2; color: #991b1b; }
+        .btn-whatsapp { background: #25D366; color: #fff; border: 1px solid #20bd5a; font-size: 10px; padding: 4px 8px; text-decoration: none; border-radius: 4px; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
+        .modal.active { display: flex; }
+        .modal-box { background: #fff; width: 100%; max-width: 450px; padding: 25px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
+        .form-item { margin-bottom: 12px; }
+        .form-item label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; color: #4b5563; }
+        .form-item input, .form-item select, .form-item textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: #fff; font-family: inherit; }
+
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fbbf24; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 12px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 3000; }
+        
+        /* NOVO DESIGN DE LOGIN */
+        #user-overlay { position: fixed; inset: 0; background: #111827; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-box { background: #1f2937; border-top: 4px solid #fbbf24; padding: 30px; border-radius: 10px; width: 100%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .login-box h2 { text-align: center; margin-bottom: 20px; font-weight: 900; font-style: italic; color: #fbbf24; }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #374151; background: #111827; color: #fff; font-family: inherit; }
+        .login-box button { width: 100%; padding: 12px; background: #fbbf24; color: #000; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .login-box button:hover { background: #f59e0b; }
+
+        .grid-2-col { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #e5e7eb; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { flex: 1; min-width: 150px; }
+        .filter-group label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; color: #4b5563; }
+        .filter-group input, .filter-group select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+
+        /* HELPER */
+        .gestor-only { display: none !important; }
+        .show-gestor { display: inline-flex !important; }
+        .badge { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #b45309; }
+        .badge-reserved { background: #ede9fe; color: #5b21b6; border: 1px solid #8b5cf6; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .chart-container { position: relative; height: 250px; width: 100%; }
+
+        @media (max-width: 900px) { .grid-2-col { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); width: 260px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
+            #sidebar.open { transform: translateX(0); }
+            .btn-close-sidebar { display: block; }
+            .btn-hamburger { display: block; }
+        }
+        @media print {
+            #sidebar, header, .filter-bar button, .modal, #toast, .nav-menu { display: none !important; }
+            #main-content { margin: 0; padding: 0; height: auto; overflow: visible; }
+            .viewport { overflow: visible; padding: 0; background: #fff; }
+            .tab-content { display: none; }
+            #tab-relatorios { display: block !important; }
+            body { background: #fff; color: #000; height: auto; overflow: visible; }
+            .data-card { border: 1px solid #000; box-shadow: none; margin-bottom: 20px; }
+            .data-card-header { background: #ddd; color: #000; font-weight: bold; border-bottom: 1px solid #000; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ccc; color: #000; padding: 8px; font-size: 10px; }
+            th { background: #eee; }
+            .grid-stats .card-stat { border: 1px solid #000; break-inside: avoid; }
+            .card-stat .value { color: #000 !important; }
+            .badge { border: 1px solid #000; background: none !important; color: #000 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- OVERLAY DE LOGIN SEGURO -->
+    <div id="user-overlay">
+        <div class="login-box">
+            <h2>TRAIL SYSTEM</h2>
+            <form onsubmit="APP.login(event)">
+                <input type="email" id="login-email" placeholder="Seu E-mail de Acesso" required>
+                <input type="password" id="login-password" placeholder="Sua Senha" required>
+                <button type="submit" id="login-btn">Entrar no Sistema</button>
+                <div id="login-error" style="color:#ef4444; font-size:12px; margin-top:10px; text-align:center; display:none; font-weight: bold;">Credenciais inválidas.</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+        <div class="brand">
+            <h1>TRAIL SYSTEM</h1>
+            <button class="btn-close-sidebar" onclick="APP.toggleMenu()">×</button>
+        </div>
+        <nav class="nav-menu">
+            <button onclick="APP.nav('dashboard')" id="btn-dashboard" class="nav-item active">📊 Dashboard</button>
+            <button onclick="APP.nav('mapa')" id="btn-mapa" class="nav-item">🗺️ Mapa MG</button>
+            <button onclick="APP.nav('diretoria')" id="btn-diretoria" class="nav-item gestor-ctrl">🏛️ Diretoria</button>
+            <button onclick="APP.nav('vendas')" id="btn-vendas" class="nav-item">💰 Catálogo</button>
+            <button onclick="APP.nav('agenda')" id="btn-agenda" class="nav-item">📅 Agenda</button>
+            <button onclick="APP.nav('funil')" id="btn-funil" class="nav-item">⚡ Funil</button>
+            <button onclick="APP.nav('clientes')" id="btn-clientes" class="nav-item">📇 Clientes</button>
+            <button onclick="APP.nav('estoque')" id="btn-estoque" class="nav-item">🚜 Estoque</button>
+            <button onclick="APP.nav('relatorios')" id="btn-relatorios" class="nav-item">📈 Relatórios</button>
+            <button onclick="APP.nav('equipe')" id="btn-equipe" class="nav-item gestor-ctrl">👥 Equipe</button>
+        </nav>
+        <div class="sidebar-footer">
+            <div id="user-info" style="color: #fbbf24; font-weight: 800; margin-bottom: 5px;"></div>
+            <button onclick="APP.logout()" style="background:none; border:1px solid #374151; color:#9ca3af; padding:4px; width:100%; cursor:pointer; font-weight: bold;">SAIR DO SISTEMA</button>
+            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5 (Seguro)</div>
+        </div>
+    </aside>
+
+    <main id="main-content">
+        <header>
+            <div class="header-left">
+                <button class="btn-hamburger" onclick="APP.toggleMenu()">☰</button>
+                <h2 id="page-title">DASHBOARD</h2>
+            </div>
+            <button id="btn-global-backup" onclick="APP.exportData()" class="btn btn-dark" style="font-size:10px;">💾 Backup (Excel)</button>
+        </header>
+
+        <div class="viewport">
+            <!-- ABA DASHBOARD -->
+            <section id="tab-dashboard" class="tab-content active">
+                <div class="grid-stats">
+                    <div class="card-stat"><label id="lbl-faturamento">Faturamento (Mês)</label><div id="kpi-total" class="value">R$ 0,00</div></div>
+                    <div class="card-stat"><label>Consórcio (Mês)</label><div id="kpi-consorcio" class="value" style="color:#f59e0b">R$ 0,00</div></div>
+                    <div class="card-stat"><label>Valor em Carteira</label><div id="kpi-pipeline" class="value" style="color:#8b5cf6">R$ 0,00</div></div>
+                    <div class="card-stat"><label>Margem de Venda Total</label><div id="kpi-margin" class="value">R$ 0,00</div></div>
+                </div>
+                
+                <div class="data-card" style="margin-bottom: 20px;">
+                    <div class="data-card-header">🎯 Metas do Mês</div>
+                    <div id="goals-container" style="padding: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;"></div>
+                </div>
+
+                <div class="grid-2-col" style="margin-bottom:20px;">
+                    <div class="data-card">
+                        <div class="data-card-header">Evolução de Vendas (6 Meses)</div>
+                        <div style="padding:10px;">
+                            <div class="chart-container"><canvas id="chart-sales"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-card-header">Mix de Produtos</div>
+                        <div style="padding:10px;">
+                            <div class="chart-container"><canvas id="chart-mix"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dash-inventory-grid" class="inventory-panel-grid"></div>
+
+                <div class="grid-2-col">
+                    <div class="data-card">
+                        <div class="data-card-header">Performance Equipe</div>
+                        <div class="table-responsive">
+                            <table id="table-performance">
+                                <thead><tr><th>Nome</th><th>Em Aberto</th><th>Ganhos</th><th>% Conv.</th><th>Total</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-card-header">🏆 Top Vendedores</div>
+                        <div id="ranking-list" style="padding: 10px;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA MAPA -->
+            <section id="tab-mapa" class="tab-content">
+                <div class="data-card" style="height: calc(100vh - 120px); margin-bottom: 0; display:flex; flex-direction:column;">
+                    <div class="data-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span id="map-header-title">🗺️ Mapa de Vendas (MG)</span>
+                        <div class="map-toggle-group">
+                            <button id="btn-view-won" class="btn-map-toggle active" onclick="APP.switchMapView('won')">Realizadas</button>
+                            <button id="btn-view-pipeline" class="btn-map-toggle" onclick="APP.switchMapView('pipeline')">Cobertura (Funil)</button>
+                        </div>
+                    </div>
+                    <div style="flex:1; padding:10px; position:relative;">
+                        <div id="map-container">
+                            <div id="map"></div>
+                            <div id="map-legend" class="map-legend"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA DIRETORIA -->
+            <section id="tab-diretoria" class="tab-content">
+                <div class="grid-stats">
+                    <div class="card-stat" style="border-top-color:#111827"><label>Capital Imobilizado</label><div id="dir-total-stock" class="value">R$ 0,00</div></div>
+                    <div class="card-stat" style="border-top-color:#10b981"><label>Faturamento Mensal</label><div id="dir-total-won" class="value">R$ 0,00</div></div>
+                    <div class="card-stat" style="border-top-color:#8b5cf6"><label>Volume em Carteira</label><div id="dir-total-pipeline" class="value">R$ 0,00</div></div>
+                    <div class="card-stat" style="border-top-color:#059669"><label>Liquidação de Críticos (Mês)</label><div id="dir-critical-recovery-top" class="value">R$ 0,00</div></div>
+                </div>
+
+                <div class="grid-2-col">
+                    <div class="data-card">
+                        <div class="data-card-header">Mix de Vendas (Mensal)</div>
+                        <div class="table-responsive">
+                            <table id="table-dir-mix">
+                                <thead><tr><th>Categoria</th><th>Qtd</th><th>Valor Total</th><th>Margem Média</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-card-header">Volume em Carteira por Vendedor</div>
+                        <div class="table-responsive">
+                            <table id="table-dir-pipeline-sellers">
+                                <thead><tr><th>Vendedor</th><th>Qtd Oport.</th><th>Valor Total</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <div class="data-card-header" style="background:#991b1b; color:#fff;">⚠️ Alerta: Itens Críticos em Stock (>365 dias)</div>
+                    <div class="table-responsive">
+                        <table id="table-dir-critical">
+                            <thead><tr><th>Modelo</th><th>Chassi</th><th>Data Entrada</th><th>Dias</th><th>Custo</th><th>Vendedor Resp.</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA CATÁLOGO -->
+            <section id="tab-vendas" class="tab-content">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="search-catalog" onkeyup="APP.renderCatalog()" placeholder="Buscar item no catálogo..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
+                </div>
+                <div class="data-card">
+                    <div class="data-card-header">Catálogo & Preços</div>
+                    <div class="table-responsive">
+                        <table id="table-catalog">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA AGENDA -->
+            <section id="tab-agenda" class="tab-content">
+                <div class="data-card" style="padding: 15px;">
+                    <div id="agenda-content"></div>
+                </div>
+            </section>
+
+            <!-- ABA FUNIL -->
+            <section id="tab-funil" class="tab-content">
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between;">
+                    <h3 style="font-weight:900;">MEU FUNIL</h3>
+                    <div style="display:flex; gap:10px;">
+                        <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:5px;"><option value="all">Todos</option></select>
+                        <button onclick="APP.prepareDeal()" class="btn btn-main">+ Oportunidade</button>
+                    </div>
+                </div>
+                <div id="kanban-board" class="kanban-board"></div>
+            </section>
+
+            <!-- ABA CLIENTES -->
+            <section id="tab-clientes" class="tab-content">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="search-client" onkeyup="APP.renderClients()" placeholder="Buscar Cliente..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
+                    <button class="btn btn-main" onclick="APP.modal('modal-client')">+ Novo Cliente</button>
+                </div>
+                <div class="data-card">
+                    <div class="table-responsive">
+                        <table id="table-clients">
+                            <thead><tr><th>Cliente / CPF</th><th>Contato</th><th>Cidade/Obs</th><th>Total Gasto</th><th>Docs</th><th>Ação</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA ESTOQUE -->
+            <section id="tab-estoque" class="tab-content">
+                <!-- Dashboard Executivo de Estoque -->
+                <div id="stock-exec-dash" class="inventory-panel-grid gestor-ctrl" style="margin-bottom: 25px;"></div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="search-stock" onkeyup="APP.renderStock()" placeholder="Buscar..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
+                    <input type="file" id="file-import" style="display:none" onchange="APP.importStock(event)">
+                    <button id="btn-import-stock" class="btn btn-dark gestor-ctrl" onclick="document.getElementById('file-import').click()">📂 Importar CSV</button>
+                    <button id="btn-new-stock" class="btn btn-main gestor-ctrl" onclick="APP.prepareStock()">+ Novo Item</button>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-header">Disponível no Pátio</div>
+                    <div class="table-responsive">
+                        <table id="table-stock">
+                            <thead><tr><th>Tipo</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Dias</th><th>Giro</th><th>Status</th><th>Ação</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="data-card" style="margin-top: 30px; border-color: #9ca3af;">
+                    <div class="data-card-header" style="background: #4b5563; color: #fff;">Itens Vendidos / Arquivados</div>
+                    <div class="table-responsive">
+                        <table id="table-stock-sold">
+                            <thead><tr><th>Data Venda</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Cliente</th><th>Ação</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA RELATÓRIOS -->
+            <section id="tab-relatorios" class="tab-content">
+                <div class="filter-bar">
+                    <div class="filter-group"><label>Data Início</label><input type="date" id="rep-start"></div>
+                    <div class="filter-group"><label>Data Fim</label><input type="date" id="rep-end"></div>
+                    <div class="filter-group">
+                        <label>Origem</label>
+                        <select id="rep-source">
+                            <option value="all">Todas</option>
+                            <option value="Loja/Passante">Loja / Passante</option>
+                            <option value="Indicacao">Indicação</option>
+                            <option value="Visita">Visita</option>
+                            <option value="Instagram">Instagram / Facebook</option>
+                            <option value="Google">Google / Site</option>
+                            <option value="Feira">Feira / Evento</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="filter-group gestor-ctrl">
+                        <label>Vendedor</label>
+                        <select id="rep-seller"><option value="all">Todos</option></select>
+                    </div>
+                    <button class="btn btn-main" onclick="APP.renderReports()">Filtrar</button>
+                    <button class="btn btn-dark" onclick="window.print()">🖨️ Imprimir</button>
+                </div>
+                <div class="grid-stats">
+                    <div class="card-stat"><label>Total Vendido (Período)</label><div id="rep-total-val" class="value" style="color:#0ea5e9">R$ 0,00</div></div>
+                    <div class="card-stat"><label>Vendas Fechadas</label><div id="rep-total-count" class="value">0</div></div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-header">Detalhamento de Vendas</div>
+                    <div class="table-responsive">
+                        <table id="table-reports">
+                            <thead><tr><th>Data</th><th>Cliente</th><th>Origem</th><th>Vendedor</th><th>Produto/Serviço</th><th>Valor</th><th>Margem</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA EQUIPE -->
+            <section id="tab-equipe" class="tab-content">
+                <div style="background:#fff3cd; color:#856404; padding:15px; border-radius:6px; margin-bottom:15px; font-size:12px;">
+                    <strong>Atenção Gestor:</strong> Para adicionar um vendedor, primeiro crie o E-mail e Senha dele no painel <b>Authentication</b> do Supabase. Depois, copie o <b>User UID</b> de lá e cadastre o perfil dele abaixo.
+                </div>
+                <button onclick="APP.prepareUser()" class="btn btn-main admin-only" style="margin-bottom:15px;">+ Novo Perfil da Equipe</button>
+                <div class="data-card">
+                    <table id="table-users">
+                        <thead><tr><th>Nome</th><th>Função</th><th>Supabase UID (Auth)</th><th>Meta (Mês)</th><th>Ação</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modais -->
+    <div id="modal-item" class="modal">
+        <div class="modal-box">
+            <h3>Gerenciar Estoque</h3>
+            <form onsubmit="APP.saveStock(event)">
+                <input type="hidden" id="stk-item-id-unique">
+                <div class="form-item"><label>Tipo</label><select id="stk-type"><option>Trator</option><option>Implemento</option><option>Outros</option></select></div>
+                <div class="form-item"><label>Modelo</label><input id="stk-model" required></div>
+                <div class="form-item"><label>Chassi/Série</label><input id="stk-mono"></div>
+                <div class="form-item"><label>Custo (R$)</label><input id="stk-cost" required oninput="APP.maskMoney(this)"></div>
+                <div class="form-item"><label>Data Entrada</label><input id="stk-date-display" disabled placeholder="Automático"></div>
+                <button class="btn btn-main" style="width:100%">Salvar</button>
+                <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:5px">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-client" class="modal">
+        <div class="modal-box">
+            <h3>Novo Cliente</h3>
+            <form onsubmit="APP.saveClient(event)">
+                <input type="hidden" id="cli-id">
+                <div class="form-item"><label>Nome Completo</label><input id="cli-name" required></div>
+                <div class="form-item"><label>CPF / CNPJ</label><input id="cli-cpf" placeholder="000.000.000-00"></div>
+                <div class="form-item"><label>Telefone (WhatsApp)</label><input id="cli-phone" oninput="APP.inputPhone(this)" placeholder="(00) 00000-0000"></div>
+                <div class="form-item"><label>Email</label><input id="cli-email" type="email"></div>
+                <div class="form-item"><label>Cidade / Obs</label><input id="cli-obs" placeholder="Ex: Belo Horizonte - MG"></div>
+                <div class="form-item"><label>Link Documentos (Drive/Nuvem)</label><input id="cli-docs" placeholder="Cole o link do Google Drive/Dropbox aqui"></div>
+                <button class="btn btn-main" style="width:100%">Salvar</button>
+                <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:5px">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-history" class="modal">
+        <div class="modal-box">
+            <h3 id="hist-title">📜 Histórico</h3>
+            <div id="history-content" style="margin-top:20px; max-height:300px; overflow-y:auto; padding-left:5px;"></div>
+            <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:20px">Fechar</button>
+        </div>
+    </div>
+
+    <div id="modal-deal" class="modal">
+        <div class="modal-box">
+            <h3>Detalhes do Negócio</h3>
+            <form onsubmit="APP.saveDeal(event)">
+                <input type="hidden" id="deal-id">
+                <div class="form-item" id="div-deal-owner" style="display:none;">
+                    <label>Responsável (Vendedor)</label>
+                    <select id="deal-owner" style="background:#fefce8; border-color:#f59e0b;"></select>
+                </div>
+                <div class="form-item">
+                    <label>Cliente</label>
+                    <input id="deal-client" list="list-clients" required placeholder="Digite ou selecione...">
+                    <datalist id="list-clients"></datalist>
+                </div>
+                <div class="form-item">
+                    <label>Cidade / Local (Para o Mapa)</label>
+                    <input id="deal-city" list="list-cities-mg" placeholder="Selecione ou digite...">
+                    <datalist id="list-cities-mg"></datalist>
+                </div>
+                <div class="form-item">
+                    <label>Origem do Lead</label>
+                    <select id="deal-source">
+                        <option value="Loja/Passante">Loja / Passante</option>
+                        <option value="Indicacao">Indicação</option>
+                        <option value="Visita">Visita</option>
+                        <option value="Instagram">Instagram / Facebook</option>
+                        <option value="Google">Google / Site</option>
+                        <option value="Feira">Feira / Evento</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-item"><label>Valor (R$)</label><input id="deal-value" required oninput="APP.maskMoney(this)"></div>
+                <div class="form-item"><label>Tipo</label><select id="deal-type" onchange="APP.toggleStock()"><option value="maquina">Máquina</option><option value="consorcio">Consórcio</option></select></div>
+                <div class="form-item" id="div-stock-select"><label>Vincular Máquina</label><select id="deal-stock"></select></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <h4 style="margin-bottom:10px; font-size:12px;">Agendar Próxima Ação</h4>
+                <div class="form-item"><label>Data</label><input type="date" id="deal-next-date"></div>
+                <div class="form-item"><label>Descrição (O que fazer?)</label><input type="text" id="deal-next-desc" placeholder="Ex: Ligar, Visitar..."></div>
+                <button class="btn btn-main" style="width:100%">Salvar</button>
+                <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:5px">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Equipe NOVO (Com UID do Supabase) -->
+    <div id="modal-user" class="modal">
+        <div class="modal-box">
+            <h3>Perfil da Equipe</h3>
+            <form onsubmit="APP.saveUser(event)">
+                <input type="hidden" id="usr-id">
+                <div class="form-item"><label>Nome de Exibição</label><input id="usr-name" required></div>
+                <div class="form-item"><label>Supabase UID (User ID)</label><input id="usr-auth-id" placeholder="Ex: 73184fcf-e1b6..." required></div>
+                <div class="form-item"><label>Função</label>
+                    <select id="usr-role">
+                        <option value="vendedor">Vendedor</option>
+                        <option value="assistente">Assistente</option>
+                        <option value="gestor">Gestor</option>
+                        <option value="diretoria_restrita">Diretoria (Visão Estratégica)</option>
+                    </select>
+                </div>
+                <div class="form-item"><label>Meta Mensal (R$)</label><input id="usr-goal" oninput="APP.maskMoney(this)" placeholder="0,00"></div>
+                <button class="btn btn-main" style="width:100%">Salvar Perfil</button>
+                <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:5px">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-map-details" class="modal">
+        <div class="modal-box" style="max-width: 500px;">
+            <h3 id="map-detail-title">Detalhes da Região</h3>
+            <div class="table-responsive" style="margin-top:15px;">
+                <table id="table-map-details">
+                    <thead><tr><th>Cliente</th><th>Valor</th><th>Etapa</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:15px">Fechar</button>
+        </div>
+    </div>
+
+    <div id="toast">Salvo com sucesso!</div>
+
+    <script>
+        const SUPABASE_URL = 'https://igvdhpzzjamoyetxickb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_mXmrR5peC1mICxxMxjDKrg_2NJUZG0Q'; 
+        let supabaseClient;
+        if (window.supabase && window.supabase.createClient) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+
+        let salesChart = null;
+        let mixChart = null;
+
+        // CIDADES MG (Mantive as principais do seu código original)
+        const MG_CITIES_COORDS = {
+            "Águas Vermelhas": [-15.74, -41.46], "Berizal": [-15.60, -41.75], "Bocaiúva": [-17.10, -43.81], "Bonito de Minas": [-15.22, -44.75],
+            "Botumirim": [-16.86, -43.00], "Brasília de Minas": [-16.20, -44.43], "Buritizeiro": [-17.35, -44.96], "Campo Azul": [-16.50, -44.80],
+            "Capitão Enéas": [-16.32, -43.70], "Catuti": [-15.35, -42.93], "Chapada Gaúcha": [-15.30, -45.61], "Claro dos Poções": [-16.87, -44.53],
+            "Cônego Marinho": [-15.32, -44.40], "Coração de Jesus": [-16.68, -44.36], "Cristália": [-16.71, -42.86], "Curral de Dentro": [-15.65, -42.25],
+            "Divisa Alegre": [-15.71, -41.33], "Engenheiro Navarro": [-17.28, -43.95], "Espinosa": [-14.92, -42.81], "Francisco Dumont": [-17.30, -44.23],
+            "Francisco Sá": [-16.47, -43.48], "Fruta de Leite": [-16.16, -42.53], "Gameleiras": [-15.25, -43.06], "Glaucilândia": [-16.80, -43.78],
+            "Grão Mogol": [-16.56, -42.89], "Guaraciama": [-17.20, -43.98], "Ibiaí": [-16.85, -44.91], "Ibiracatu": [-15.58, -44.22],
+            "Icaraí de Minas": [-16.18, -44.90], "Indaiabira": [-15.48, -42.60], "Itacambira": [-17.06, -43.30], "Itacarambi": [-15.10, -44.09],
+            "Jaíba": [-15.34, -43.67], "Janaúba": [-15.80, -43.30], "Januária": [-15.48, -44.36], "Japonvar": [-16.03, -44.33],
+            "Jequitaí": [-17.23, -44.43], "Josenópolis": [-16.48, -42.50], "Juramento": [-16.83, -43.58], "Juvenília": [-14.37, -44.15],
+            "Lagoa dos Patos": [-16.98, -44.58], "Lontra": [-15.90, -44.28], "Luislândia": [-16.08, -44.65], "Mamonas": [-15.05, -43.08],
+            "Manga": [-14.75, -43.93], "Matias Cardoso": [-14.85, -43.91], "Mato Verde": [-15.39, -42.86], "Mirabela": [-16.26, -44.16],
+            "Miravânia": [-14.45, -44.17], "Montalvânia": [-14.42, -44.36], "Monte Azul": [-15.15, -42.87], "Montes Claros": [-16.72, -43.86],
+            "Montezuma": [-15.16, -42.50], "Ninheira": [-15.75, -42.55], "Nova Porteirinha": [-15.80, -43.28], "Novorizonte": [-15.68, -41.78],
+            "Olhos-d'Água": [-17.23, -43.56], "Padre Carvalho": [-16.30, -42.51], "Pai Pedro": [-15.53, -43.20], "Patis": [-16.10, -44.18],
+            "Pedras de Maria da Cruz": [-15.60, -44.38], "Pintópolis": [-16.05, -45.15], "Pirapora": [-17.34, -44.94], "Ponto Chique": [-16.21, -44.88],
+            "Porteirinha": [-15.73, -43.02], "Riacho dos Machados": [-16.03, -43.05], "Rio Pardo de Minas": [-15.61, -42.53], "Rubelita": [-16.38, -42.28],
+            "Salinas": [-16.17, -42.29], "Santa Cruz de Salinas": [-16.11, -42.15], "Santo Antônio do Retiro": [-15.35, -42.58], "São Francisco": [-16.15, -44.86],
+            "São João da Lagoa": [-16.78, -44.15], "São João da Ponte": [-15.93, -44.00], "São João das Missões": [-14.88, -44.13], "São João do Pacuí": [-16.71, -44.15],
+            "São João do Paraíso": [-15.31, -42.01], "Serranópolis de Minas": [-15.78, -42.96], "Taiobeiras": [-15.80, -42.22], "Turmalina": [-17.28, -42.73],
+            "Ubaí": [-16.22, -44.80], "Vargem Grande do Rio Pardo": [-15.45, -42.31], "Varzelândia": [-15.70, -44.02], "Verdelândia": [-15.40, -43.70], "Veredinha": [-17.38, -42.73]
+        };
+
+        const APP = {
+            data: { stock: [], users: [], deals: [], clients: [] },
+            user: null, authUser: null, dragId: null, map: null, mapView: 'won',
+
+            init: async () => {
+                if (!supabaseClient) return alert("ERRO: Não foi possível conectar ao banco de dados.");
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                
+                if (session) { await APP.loadUserData(session.user); } 
+                else { document.getElementById('user-overlay').style.display = 'flex'; }
+
+                supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                    if (event === 'SIGNED_OUT' || !session) {
+                        APP.user = null; APP.authUser = null;
+                        document.getElementById('user-overlay').style.display = 'flex';
+                    }
+                });
+            },
+
+            loadUserData: async (authUser) => {
+                APP.authUser = authUser;
+                document.getElementById('user-overlay').style.display = 'none';
+                
+                const { data: profile, error } = await supabaseClient.from('users').select('*').eq('auth_id', authUser.id).single();
+                
+                if (error || !profile) {
+                    alert("Seu acesso foi autorizado, mas seu perfil não foi encontrado na tabela da equipe. Fale com o Gestor.");
+                    APP.logout(); return;
+                }
+
+                APP.user = profile;
+                document.getElementById('user-info').innerText = APP.user.name;
+                await APP.loadDatabaseData();
+            },
+
+            loadDatabaseData: async () => {
+                // RLS EM AÇÃO: Só traz o que é permitido
+                const [usersReq, clientsReq, stockReq, dealsReq] = await Promise.all([
+                    supabaseClient.from('users').select('*'),
+                    supabaseClient.from('clients').select('*'),
+                    supabaseClient.from('stock').select('*'),
+                    supabaseClient.from('deals').select('*')
+                ]);
+
+                APP.data.users = usersReq.data || []; APP.data.clients = clientsReq.data || [];
+                APP.data.stock = stockReq.data || []; APP.data.deals = dealsReq.data || [];
+
+                APP.syncStockStatus(); APP.initRealtime(); APP.applyRoleUI();
+
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                if(document.getElementById('rep-start')) document.getElementById('rep-start').value = firstDay.toISOString().split('T')[0];
+                if(document.getElementById('rep-end')) document.getElementById('rep-end').value = lastDay.toISOString().split('T')[0];
+
+                APP.renderAll();
+            },
+
+            login: async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                const btn = document.getElementById('login-btn');
+                const err = document.getElementById('login-error');
+                
+                btn.innerText = "Aguarde..."; err.style.display = 'none';
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                
+                if (error) { err.style.display = 'block'; btn.innerText = "Entrar no Sistema"; return; }
+                await APP.loadUserData(data.user);
+            },
+
+            logout: async () => { await supabaseClient.auth.signOut(); },
+
+            applyRoleUI: () => {
+                const isGestor = APP.user.role === 'gestor';
+                const isAssistente = APP.user.role === 'assistente';
+                const isDiretoria = APP.user.role === 'diretoria_restrita';
+
+                if (isDiretoria) {
+                    document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'none');
+                    document.getElementById('btn-diretoria').style.display = 'flex';
+                    document.getElementById('btn-global-backup').style.display = 'none';
+                    APP.nav('diretoria');
+                } else {
+                    document.getElementById('btn-global-backup').style.display = 'inline-flex';
+                    document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'flex');
+                    document.querySelectorAll('.gestor-ctrl').forEach(b => b.style.display = (isGestor||isAssistente)?'inline-flex':'none');
+                    document.querySelectorAll('.admin-only').forEach(b => b.style.display = isGestor?'inline-flex':'none');
+                }
+
+                const filter = document.getElementById('filter-user');
+                const selFilter = document.getElementById('rep-seller');
+                if(isGestor||isAssistente||isDiretoria) {
+                    filter.style.display = 'block'; filter.innerHTML = '<option value="all">Ver Todos</option>'; selFilter.innerHTML = '<option value="all">Todos</option>';
+                    APP.data.users.forEach(u => { const opt = `<option value="${u.name}">${u.name}</option>`; filter.innerHTML+=opt; selFilter.innerHTML+=opt; });
+                } else { filter.style.display = 'none'; }
+            },
+
+            initRealtime: () => {
+                supabaseClient.channel('public:data')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, payload => { APP.handleRealtimeUpdate('deals', payload); })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, payload => { APP.handleRealtimeUpdate('stock', payload); })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, payload => { APP.handleRealtimeUpdate('clients', payload); })
+                    .subscribe();
+            },
+
+            handleRealtimeUpdate: (table, payload) => {
+                const { eventType, new: nItem, old: oItem } = payload;
+                if (eventType === 'INSERT') APP.data[table].push(nItem);
+                else if (eventType === 'UPDATE') { const idx = APP.data[table].findIndex(i => i.id === nItem.id); if (idx !== -1) APP.data[table][idx] = nItem; }
+                else if (eventType === 'DELETE') APP.data[table] = APP.data[table].filter(i => i.id !== oItem.id);
+                if (table === 'deals') APP.syncStockStatus();
+                APP.toast('Sincronizado 🔄'); APP.renderAll();
+            },
+
+            syncStockStatus: () => {
+                const sMap = {};
+                APP.data.deals.forEach(d => {
+                    if(!d.stock_id || d.stage==='perdido') return;
+                    let p = 0; if(d.stage==='ganho') p=3; else if(d.stage==='af') p=2; else if(['analise_credito','documentacao','contrato'].includes(d.stage)) p=1;
+                    if(sMap[d.stock_id]===undefined || p>sMap[d.stock_id]) sMap[d.stock_id]=p;
+                });
+                APP.data.stock.forEach(s => {
+                    if(sMap[s.id]!==undefined) {
+                        let ns = 'Disponível'; if(sMap[s.id]===3) ns='Vendido'; else if(sMap[s.id]===2) ns='Reservado'; else if(sMap[s.id]===1) ns='Em Disputa';
+                        if(s.status!==ns) s.status=ns;
+                    } else if(s.status!=='Vendido' && s.status!=='Disponível') s.status='Disponível';
+                });
+            },
+
+            refreshLocal: (table, item, isDel=false) => {
+                if(isDel) APP.data[table] = APP.data[table].filter(i=>i.id!==item.id);
+                else { const idx = APP.data[table].findIndex(i=>i.id===item.id); if(idx>-1) APP.data[table][idx]=item; else APP.data[table].push(item); }
+                APP.renderAll();
+            },
+
+            addLog: (obj, act, det) => { if(!obj.history) obj.history=[]; obj.history.push({date:Date.now(),user:APP.user.name,action:act,detail:det}); return obj.history; },
+            addHistory: async (stockId, action, detail) => { const item = APP.data.stock.find(s => s.id === stockId); if(!item) return; const newHistory = APP.addLog(item, action, detail); await supabaseClient.from('stock').update({ history: newHistory }).eq('id', stockId); },
+            addDealHistory: async (dealId, action, detail) => { const item = APP.data.deals.find(d => d.id === dealId); if(!item) return; const newHistory = APP.addLog(item, action, detail); await supabaseClient.from('deals').update({ history: newHistory }).eq('id', dealId); },
+
+            toggleMenu: () => document.getElementById('sidebar').classList.toggle('open'),
+            toast: (msg) => { const t=document.getElementById('toast'); t.innerText=msg; t.style.opacity=1; setTimeout(()=>t.style.opacity=0,3000); },
+            
+            nav: (tab) => {
+                if (APP.user && APP.user.role === 'diretoria_restrita' && tab !== 'diretoria') return;
+                document.getElementById('sidebar').classList.remove('open');
+                document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+                if(document.getElementById('tab-'+tab)) document.getElementById('tab-'+tab).classList.add('active');
+                if(document.getElementById('btn-'+tab)) document.getElementById('btn-'+tab).classList.add('active');
+                document.getElementById('page-title').innerText = tab.toUpperCase();
+                
+                if(tab==='estoque') APP.renderStock(); if(tab==='funil') APP.renderKanban(); if(tab==='relatorios') APP.renderReports();
+                if(tab==='clientes') APP.renderClients(); if(tab==='agenda') APP.renderAgenda(); if(tab==='vendas') APP.renderCatalog();
+                if(tab==='equipe') APP.renderUsers(); if(tab==='diretoria') APP.renderDiretoria(); 
+                if(tab==='dashboard') { APP.renderGoals(); setTimeout(APP.renderCharts, 200); }
+                if(tab==='mapa') setTimeout(APP.renderMap, 200);
+            },
+
+            // MAPA
+            switchMapView: (view) => { APP.mapView = view; document.getElementById('btn-view-won').classList.toggle('active', view === 'won'); document.getElementById('btn-view-pipeline').classList.toggle('active', view === 'pipeline'); document.getElementById('map-header-title').innerText = view === 'won' ? '🗺️ Mapa de Vendas (MG)' : '🗺️ Mapa de Cobertura (Funil)'; APP.renderMap(); },
+            renderMap: async () => {
+                const container = document.getElementById('map'); if(!container) return;
+                if(!APP.map) { APP.map = L.map('map').setView([-16.7289, -43.8617], 7); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(APP.map); }
+                APP.map.invalidateSize(); APP.map.eachLayer((layer) => { if (layer instanceof L.CircleMarker) APP.map.removeLayer(layer); });
+                const aggregatedData = APP.aggregateMapData(APP.mapView);
+                if (aggregatedData.length === 0) APP.toast("Nada para mostrar no mapa.");
+                const legendEl = document.getElementById('map-legend'); legendEl.innerHTML = '<strong>Vendedores</strong>'; const sellersSet = new Set();
+                aggregatedData.forEach(item => {
+                    if (!item.lat || !item.lng) return; const color = APP.stringToColor(item.seller); sellersSet.add(item.seller);
+                    const safeRadius = Math.max(Math.sqrt(item.total_value) / 60, 5);
+                    const marker = L.circleMarker([item.lat, item.lng], { color: color, fillColor: color, fillOpacity: 0.6, radius: safeRadius }).addTo(APP.map);
+                    marker.bindTooltip(`<div style="text-align:center;"><strong>${item.city}</strong><br><span style="font-size:11px">Vend: ${item.seller}</span><br><span style="font-size:12px; font-weight:bold;">${item.total_value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span><br><small>${item.count} negócios</small></div>`);
+                    marker.on('click', () => { APP.openMapDetails(item.city, item.seller); });
+                });
+                sellersSet.forEach(seller => { legendEl.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${APP.stringToColor(seller)}"></div><span>${seller}</span></div>`; });
+            },
+            aggregateMapData: (mode) => {
+                let filtered = mode === 'won' ? APP.data.deals.filter(d => d.stage === 'ganho') : APP.data.deals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido');
+                const agg = {};
+                filtered.forEach(deal => {
+                    const client = APP.data.clients.find(c => c.name === deal.client);
+                    const searchKey = APP.removeAccents(client ? (client.obs || '').split('-')[0].trim() : '').toUpperCase();
+                    const matchedKey = Object.keys(MG_CITIES_COORDS).find(k => APP.removeAccents(k).toUpperCase() === searchKey);
+                    if (matchedKey) {
+                        const key = `${matchedKey}_${deal.owner}`;
+                        if (!agg[key]) agg[key] = { city: matchedKey, seller: deal.owner, total_value: 0, count: 0, lat: MG_CITIES_COORDS[matchedKey][0], lng: MG_CITIES_COORDS[matchedKey][1] };
+                        agg[key].total_value += deal.value; agg[key].count += 1;
+                    }
+                });
+                return Object.values(agg);
+            },
+            openMapDetails: (city, seller) => {
+                const tbody = document.querySelector('#table-map-details tbody'); document.getElementById('map-detail-title').innerText = `Detalhes: ${city} (${seller})`;
+                let filtered = APP.mapView === 'won' ? APP.data.deals.filter(d => d.stage === 'ganho' && d.owner === seller) : APP.data.deals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido' && d.owner === seller);
+                filtered = filtered.filter(d => { const client = APP.data.clients.find(c => c.name === d.client); return (client ? (client.obs || '') : '').toLowerCase().includes(city.toLowerCase()); });
+                tbody.innerHTML = filtered.map(d => `<tr><td>${d.client}</td><td style="font-weight:bold;">${d.value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td><td><span class="badge badge-success">${d.stage}</span></td></tr>`).join('');
+                if(filtered.length === 0) tbody.innerHTML = '<tr><td colspan="3">Nenhum detalhe.</td></tr>'; APP.modal('modal-map-details');
+            },
+
+            // EQUIPE
+            renderUsers: () => {
+                const tbody = document.querySelector('#table-users tbody'); if(!tbody) return;
+                const isG = APP.user.role==='gestor';
+                tbody.innerHTML = APP.data.users.map(u => `<tr><td>${u.name}</td><td>${u.role}</td><td><small style="color:#9ca3af">${u.auth_id||'-'}</small></td><td>${u.goal?u.goal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'-'}</td><td>${isG?`<button onclick="APP.editUser('${u.id}')" class="btn btn-small">Editar</button>`:''}</td></tr>`).join('');
+                
+                const tbPerf = document.querySelector('#table-performance tbody'); let ranking = [];
+                if(tbPerf) {
+                    tbPerf.innerHTML = APP.data.users.map(u => {
+                        const userDeals = APP.data.deals.filter(d => d.owner === u.name);
+                        const open = userDeals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido').length;
+                        const wonDeals = userDeals.filter(d => d.stage === 'ganho');
+                        const totalSales = wonDeals.reduce((a, b) => a + b.value, 0);
+                        if (u.role !== 'gestor' && u.role !== 'diretoria_restrita') ranking.push({name: u.name, total: totalSales});
+                        return `<tr><td>${u.name}</td><td>${open}</td><td>${wonDeals.length}</td><td><b>${userDeals.length > 0 ? ((wonDeals.length / userDeals.length) * 100).toFixed(1) : '0.0'}%</b></td><td>${userDeals.length}</td></tr>`;
+                    }).join('');
+                    ranking.sort((a,b) => b.total - a.total);
+                    document.getElementById('ranking-list').innerHTML = ranking.map((r, i) => `<div class="ranking-row"><div style="display:flex; align-items:center;"><div class="ranking-pos">${i+1}</div><div class="ranking-name">${r.name}</div></div><div class="ranking-val">${r.total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</div></div>`).join('');
+                }
+            },
+            prepareUser: () => { document.getElementById('usr-id').value=''; document.getElementById('usr-name').value=''; document.getElementById('usr-auth-id').value=''; document.getElementById('usr-role').value='vendedor'; document.getElementById('usr-goal').value=''; APP.modal('modal-user'); },
+            editUser: (id) => { const u = APP.data.users.find(x=>x.id==id); if(!u) return; document.getElementById('usr-id').value=u.id; document.getElementById('usr-name').value=u.name; document.getElementById('usr-auth-id').value=u.auth_id||''; document.getElementById('usr-role').value=u.role; document.getElementById('usr-goal').value=u.goal||''; APP.modal('modal-user'); },
+            saveUser: async (e) => {
+                e.preventDefault(); if(APP.user.role!=='gestor') return;
+                const id = document.getElementById('usr-id').value;
+                const data = { name:document.getElementById('usr-name').value, auth_id:document.getElementById('usr-auth-id').value, role:document.getElementById('usr-role').value, goal:APP.parseMoney(document.getElementById('usr-goal').value) };
+                if(id) await supabaseClient.from('users').update(data).eq('id',id); else await supabaseClient.from('users').insert(data);
+                APP.closeModals(); APP.toast('Usuário salvo. Atualize a página.');
+            },
+
+            // CLIENTES
+            saveClient: async (e) => {
+                e.preventDefault(); const id = document.getElementById('cli-id').value;
+                const data = { name: document.getElementById('cli-name').value, phone: document.getElementById('cli-phone').value, email: document.getElementById('cli-email').value, obs: document.getElementById('cli-obs').value, cpf_cnpj: document.getElementById('cli-cpf').value, doc_link: document.getElementById('cli-docs').value };
+                if (id) data.id = id; const { data:ret, error } = await supabaseClient.from('clients').upsert(data).select();
+                if(error) return alert("Erro: " + error.message); APP.refreshLocal('clients', ret[0]); APP.closeModals(); 
+            },
+            deleteClient: async (id) => { if(confirm('Excluir?')) { const { error } = await supabaseClient.from('clients').delete().eq('id', id); if(!error) APP.refreshLocal('clients', {id}, true); } },
+            editClient: (id) => { const c = APP.data.clients.find(x=>x.id==id); if(c) { document.getElementById('cli-id').value=c.id; document.getElementById('cli-name').value=c.name; document.getElementById('cli-phone').value=c.phone; document.getElementById('cli-email').value=c.email; document.getElementById('cli-obs').value=c.obs; document.getElementById('cli-cpf').value=c.cpf_cnpj||''; document.getElementById('cli-docs').value=c.doc_link||''; APP.modal('modal-client'); } },
+            renderClients: () => {
+                const term = document.getElementById('search-client').value.toLowerCase(); const tbody = document.querySelector('#table-clients tbody'); if(!tbody) return;
+                tbody.innerHTML = APP.data.clients.filter(c => c.name.toLowerCase().includes(term)).map(c => {
+                    const totalSpent = APP.data.deals.filter(d => d.client === c.name && d.stage === 'ganho').reduce((acc, curr) => acc + curr.value, 0);
+                    return `<tr><td><b>${c.name}</b><br><small style="color:#6b7280">${c.cpf_cnpj||''}</small></td><td><div style="font-size:12px">${c.phone||'-'}</div>${c.phone?`<a href="#" onclick="APP.openWhatsapp('${c.phone}')" class="btn-whatsapp">Zap</a>`:''}</td><td>${c.obs||'-'}</td><td><span style="color:#059669; font-weight:800;">${totalSpent.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></td><td>${c.doc_link?`<a href="${c.doc_link}" target="_blank" class="btn btn-small btn-dark">📂</a>`:'-'}</td><td><button onclick="APP.editClient('${c.id}')" class="btn btn-small btn-main">✏️</button> <button onclick="APP.deleteClient('${c.id}')" class="btn btn-small btn-danger">×</button></td></tr>`;
+                }).join('');
+            },
+
+            // ESTOQUE
+            importStock: (e) => { /* Mantido simplificado para o exemplo */ e.target.value = ''; alert("Para importar CSV em produção, conecte o Parser."); },
+            saveStock: async (e) => {
+                e.preventDefault(); if(APP.user.role!=='gestor' && APP.user.role!=='assistente') return;
+                const id = document.getElementById('stk-item-id-unique').value; 
+                const data = { type: document.getElementById('stk-type').value, model: document.getElementById('stk-model').value, mono: document.getElementById('stk-mono').value, cost: APP.parseMoney(document.getElementById('stk-cost').value) };
+                if (id) { await supabaseClient.from('stock').update(data).eq('id', id); APP.addHistory(id, 'Edição', 'Atualizado'); } 
+                else { data.status='Disponível'; data.history=[{date:Date.now(),user:APP.user.name,action:'Criação',detail:'Manual'}]; await supabaseClient.from('stock').insert(data); }
+                APP.closeModals(); setTimeout(APP.loadDatabaseData, 500);
+            },
+            prepareStock: () => { document.getElementById('stk-item-id-unique').value=''; document.getElementById('stk-model').value=''; document.getElementById('stk-mono').value=''; document.getElementById('stk-cost').value=''; APP.modal('modal-item'); },
+            restoreStock: async (id) => { if(confirm('Restaurar?')) { await supabaseClient.from('stock').update({status:'Disponível'}).eq('id',id); APP.addHistory(id,'Restauração','Manual'); setTimeout(APP.loadDatabaseData, 500); } },
+            deleteStock: async (id) => { if(confirm('Excluir?')) { await supabaseClient.from('stock').delete().eq('id',id); APP.refreshLocal('stock',{id},true); } },
+            editStock: (id) => { const s=APP.data.stock.find(x=>x.id==id); document.getElementById('stk-item-id-unique').value=s.id; document.getElementById('stk-model').value=s.model; document.getElementById('stk-mono').value=s.mono; document.getElementById('stk-cost').value=s.cost; APP.modal('modal-item'); },
+            toggleStock: () => document.getElementById('div-stock-select').style.display = document.getElementById('deal-type').value === 'consorcio' ? 'none' : 'block',
+            
+            renderStock: () => {
+                if (!APP.user) return; const term = (document.getElementById('search-stock')?document.getElementById('search-stock').value:'').toLowerCase();
+                const tbody = document.querySelector('#table-stock tbody'); const tbodySold = document.querySelector('#table-stock-sold tbody');
+                if(!tbody) return; let html = ''; let htmlSold = '';
+                const isG = APP.user.role === 'gestor'; const isA = APP.user.role === 'assistente';
+
+                const avail = APP.data.stock.filter(s => s.status !== 'Vendido');
+                const totalCap = avail.reduce((a,b)=>a+b.cost,0);
+                if(document.getElementById('stock-exec-dash') && (isG||isA)) {
+                    document.getElementById('stock-exec-dash').innerHTML = `<div class="inv-card"><div class="inv-label">💰 Imobilizado</div><div class="inv-value">${totalCap.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div></div><div class="inv-card"><div class="inv-label">🚜 Total Itens</div><div class="inv-value">${avail.length}</div></div>`;
+                }
+
+                APP.data.stock.forEach(s => {
+                    if (s.model.toLowerCase().includes(term) || (s.mono && s.mono.toLowerCase().includes(term))) {
+                        if (s.status !== 'Vendido') {
+                            const days = APP.daysDiff(new Date(s.date_entry||Date.now()).getTime());
+                            let giro = 'Saudável'; if(days>365) giro='URGENTE'; else if(days>210) giro='Crítico';
+                            html += `<tr><td>${s.type}</td><td><b>${s.model}</b></td><td>${s.mono||'-'}</td><td>${s.cost.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>${days}d</td><td>${giro}</td><td><span class="badge badge-success">${s.status}</span></td><td>${(isG||isA)?`<button onclick="APP.editStock('${s.id}')" class="btn btn-small">✏️</button>`:''}<button onclick="APP.viewHistory('${s.id}','stock')" class="btn btn-small">📜</button></td></tr>`;
+                        } else {
+                            htmlSold += `<tr><td>-</td><td><b>${s.model}</b></td><td>${s.mono||'-'}</td><td>${s.cost.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>-</td><td>${isG?`<button onclick="APP.restoreStock('${s.id}')" class="btn btn-small">♻️</button>`:''}</td></tr>`;
+                        }
+                    }
+                });
+                tbody.innerHTML = html || '<tr><td colspan="8">Nada encontrado.</td></tr>';
+                if(tbodySold) tbodySold.innerHTML = htmlSold || '<tr><td colspan="6">Nada encontrado.</td></tr>';
+            },
+
+            // NEGÓCIOS / FUNIL
+            prepareDeal: (stockId = null) => {
+                document.getElementById('deal-id').value = '';
+                const sel = document.getElementById('deal-stock'); sel.innerHTML = '<option value="">Sem Máquina</option>';
+                APP.data.stock.filter(s => s.status !== 'Vendido').forEach(s => { sel.innerHTML += `<option value="${s.id}" ${stockId==s.id?'selected':''}>${s.model} - R$ ${s.cost}</option>`; });
+                document.getElementById('list-clients').innerHTML = APP.data.clients.map(c => `<option value="${c.name}">`).join('');
+                document.getElementById('list-cities-mg').innerHTML = Object.keys(MG_CITIES_COORDS).map(c => `<option value="${c}">`).join('');
+                
+                const ownerDiv = document.getElementById('div-deal-owner');
+                if (['gestor','assistente'].includes(APP.user.role)) {
+                    ownerDiv.style.display = 'block';
+                    document.getElementById('deal-owner').innerHTML = APP.data.users.map(u => `<option value="${u.name}" ${u.name===APP.user.name?'selected':''}>${u.name}</option>`).join('');
+                } else { ownerDiv.style.display = 'none'; }
+                APP.modal('modal-deal');
+            },
+            saveDeal: async (e) => {
+                e.preventDefault(); const id = document.getElementById('deal-id').value;
+                const data = { client: document.getElementById('deal-client').value, source: document.getElementById('deal-source').value, value: APP.parseMoney(document.getElementById('deal-value').value), stock_id: document.getElementById('deal-stock').value||null, deal_type: document.getElementById('deal-type').value, next_date: document.getElementById('deal-next-date').value||null, next_desc: document.getElementById('deal-next-desc').value, owner: document.getElementById('deal-owner')?document.getElementById('deal-owner').value:APP.user.name };
+                if (id) { await supabaseClient.from('deals').update(data).eq('id',id); } 
+                else { data.stage='prospeccao'; data.history=[{date:Date.now(),user:APP.user.name,action:'Criação',detail:'Oportunidade'}]; await supabaseClient.from('deals').insert(data); }
+                APP.closeModals(); setTimeout(APP.loadDatabaseData, 500);
+            },
+            editDeal: (id) => {
+                const d = APP.data.deals.find(x=>x.id==id); if(!d) return; APP.prepareDeal(d.stock_id);
+                document.getElementById('deal-id').value=d.id; document.getElementById('deal-client').value=d.client; document.getElementById('deal-value').value=d.value; document.getElementById('deal-next-date').value=d.next_date||''; document.getElementById('deal-next-desc').value=d.next_desc||'';
+            },
+            deleteDeal: async (id) => { if(confirm('Excluir?')) { await supabaseClient.from('deals').delete().eq('id',id); APP.refreshLocal('deals',{id},true); } },
+            updateStage: async (id, stage) => {
+                const deal = APP.data.deals.find(d=>d.id==id); if(!deal) return;
+                let desc = deal.next_desc; if(stage==='perdido') { desc = prompt("Motivo da perda?"); if(!desc) desc='Não informado'; }
+                const up = { stage:stage, next_desc: stage==='perdido'?`PERDA: ${desc}`:desc };
+                if(stage==='ganho') up.close_date = new Date().toISOString();
+                await supabaseClient.from('deals').update(up).eq('id',id);
+                setTimeout(APP.loadDatabaseData, 500);
+            },
+
+            renderKanban: () => {
+                if(!APP.user) return;
+                const cols = [{id:'prospeccao', l:'Prospecção', c:'#3b82f6'},{id:'analise_credito', l:'Análise', c:'#0ea5e9'},{id:'documentacao', l:'Docs', c:'#eab308'},{id:'contrato', l:'Contrato', c:'#f97316'},{id:'af', l:'A.F.', c:'#8b5cf6'},{id:'ganho', l:'Ganho', c:'#10b981'},{id:'perdido', l:'Perdido', c:'#374151'}];
+                const container = document.getElementById('kanban-board'); if(!container) return; container.innerHTML = '';
+                let deals = APP.data.deals;
+                if (['gestor','assistente'].includes(APP.user.role)) { const f=document.getElementById('filter-user').value; if(f!=='all') deals=deals.filter(d=>d.owner===f); } else { deals=deals.filter(d=>d.owner===APP.user.name); }
+                cols.forEach(c => {
+                    const items = deals.filter(d => d.stage === c.id);
+                    const totalCol = items.reduce((a,b)=>a+b.value,0);
+                    const div = document.createElement('div'); div.className = 'kanban-col';
+                    div.ondragover = e => { e.preventDefault(); div.classList.add('drag-over'); }; div.ondragleave = e => div.classList.remove('drag-over');
+                    div.ondrop = e => { e.preventDefault(); div.classList.remove('drag-over'); if(APP.dragId) APP.updateStage(APP.dragId, c.id); };
+                    let html = `<div class="kanban-header" style="background:${c.c}"><div>${c.l} (${items.length})</div><div class="kanban-header-total">${totalCol.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div></div><div class="kanban-list">`;
+                    items.forEach(d => {
+                        html += `<div class="card" draggable="true" onclick="APP.editDeal('${d.id}')" ondragstart="APP.dragId='${d.id}'; this.classList.add('dragging')" ondragend="this.classList.remove('dragging')"><div class="card-tags"><span class="tag">👤 ${d.owner}</span><button class="btn-card-icon" onclick="event.stopPropagation(); APP.deleteDeal('${d.id}')">🗑️</button></div><div style="font-weight:800;">${d.client}</div><div style="font-weight:700;">${d.value.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>`;
+                    });
+                    html += '</div>'; div.innerHTML = html; container.appendChild(div);
+                });
+            },
+
+            // DASHBOARDS, RELATÓRIOS E OUTROS
+            renderKPIs: () => {
+                if(!APP.user) return; const isG = APP.user.role==='gestor'||APP.user.role==='assistente';
+                const scope = isG ? APP.data.deals : APP.data.deals.filter(d=>d.owner===APP.user.name);
+                const won = scope.filter(d=>d.stage==='ganho');
+                const tot = won.reduce((a,b)=>a+b.value,0);
+                if(document.getElementById('kpi-total')) document.getElementById('kpi-total').innerText = tot.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            },
+            renderReports: () => {
+                const tbody = document.querySelector('#table-reports tbody'); if(!tbody) return;
+                let html = ''; let count=0; let tot=0;
+                APP.data.deals.filter(d=>d.stage==='ganho').forEach(d => { tot+=d.value; count++; html+=`<tr><td>-</td><td>${d.client}</td><td>${d.source||'-'}</td><td>${d.owner}</td><td>-</td><td>${d.value}</td><td>-</td></tr>`; });
+                tbody.innerHTML = html || '<tr><td colspan="7">Nenhum dado</td></tr>';
+                if(document.getElementById('rep-total-val')) document.getElementById('rep-total-val').innerText = tot.toLocaleString('pt-BR');
+                if(document.getElementById('rep-total-count')) document.getElementById('rep-total-count').innerText = count;
+            },
+            renderDiretoria: () => {
+                const avail = APP.data.stock.filter(s=>s.status!=='Vendido').reduce((a,b)=>a+b.cost,0);
+                if(document.getElementById('dir-total-stock')) document.getElementById('dir-total-stock').innerText = avail.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            },
+            renderCatalog: () => {
+                const tbody = document.querySelector('#table-catalog tbody'); if(!tbody) return;
+                tbody.innerHTML = APP.data.stock.filter(s=>s.status!=='Vendido').map(s=>`<tr><td>${s.model}</td><td>${s.status}</td><td>${s.cost}</td></tr>`).join('');
+            },
+            renderGoals: () => {}, renderCharts: () => {}, renderAgenda: () => {},
+            viewHistory: (id, type) => { alert("Histórico funcional no sistema completo."); },
+            parseMoney: (v) => { if(typeof v==='number') return v; if(!v) return 0; return parseFloat(v.toString().replace(/[R$€\s]/g,'').replace(/\./g,'').replace(',','.').trim())||0; },
+            daysDiff: (ts) => Math.floor((Date.now() - ts) / 86400000),
+            maskMoney: (i) => { let v=i.value.replace(/\D/g,''); v=(v/100).toFixed(2).replace(".",",").replace(/(\d)(?=(\d{3})+(?!\d))/g,"$1."); i.value=v; },
+            inputPhone: (i) => { let v=i.value.replace(/\D/g,""); v=v.replace(/^(\d{2})(\d)/g,"($1) $2"); v=v.replace(/(\d)(\d{4})$/,"$1-$2"); i.value=v; },
+            openWhatsapp: (p) => { if(p) window.open(`https://wa.me/55${p.replace(/\D/g,'')}`, '_blank'); },
+            exportData: () => { const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.stock),"Estoque"); XLSX.writeFile(wb,"Backup.xlsx"); },
+            renderAll: () => { APP.renderStock(); APP.renderKanban(); APP.renderUsers(); APP.renderKPIs(); APP.renderClients(); APP.renderCatalog(); APP.renderAgenda(); }
+        };
+        document.addEventListener('DOMContentLoaded', APP.init);
+    </script>
+</body></html>
