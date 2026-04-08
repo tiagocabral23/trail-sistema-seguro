@@ -169,7 +169,7 @@
         <div class="sidebar-footer">
             <div id="user-info" style="color:#fbbf24;font-weight:800;margin-bottom:5px"></div>
             <button onclick="APP.logout()" style="background:0 0;border:1px solid #374151;color:#9ca3af;padding:4px;width:100%;cursor:pointer;font-weight:bold;">SAIR DO SISTEMA</button>
-            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5.3 (Seguro)</div>
+            <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5.4 (Seguro)</div>
         </div>
     </aside>
 
@@ -313,8 +313,6 @@
                 <div id="stock-exec-dash" class="inventory-panel-grid gestor-ctrl" style="margin-bottom: 25px;"></div>
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="search-stock" onkeyup="APP.renderStock()" placeholder="Buscar..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
-                    <input type="file" id="file-import" style="display:none" onchange="APP.importStock(event)">
-                    <button id="btn-import-stock" class="btn btn-dark gestor-ctrl" onclick="document.getElementById('file-import').click()">📂 Importar CSV</button>
                     <button id="btn-new-stock" class="btn btn-main gestor-ctrl" onclick="APP.prepareStock()">+ Novo Item</button>
                 </div>
                 <div class="data-card">
@@ -534,8 +532,6 @@
 
             loadUser: async (authUser) => {
                 try {
-                    // CORREÇÃO: Usar apenas a lista (Array) e apanhar o primeiro elemento 
-                    // para evitar o erro "multiple rows returned" se houver perfis duplicados no banco
                     const { data: profiles, error } = await dbClient.from('users').select('*').eq('auth_id', authUser.id);
                     
                     if (error) {
@@ -550,7 +546,6 @@
                         return;
                     }
 
-                    // Se houver perfis duplicados com o mesmo UID, agarra apenas o primeiro de forma segura
                     const profile = profiles[0];
 
                     APP.user = profile;
@@ -587,18 +582,6 @@
                     dbClient.from('deals').select('*'),
                     dbClient.from('clients').select('*')
                 ]);
-                
-                // Aviso visual de bloqueio RLS para facilitar a deteção de problemas
-                let errorMsgs = [];
-                if (u.error) errorMsgs.push("Tabela Equipe: " + u.error.message);
-                if (s.error) errorMsgs.push("Tabela Estoque: " + s.error.message);
-                if (d.error) errorMsgs.push("Tabela Negócios: " + d.error.message);
-                if (c.error) errorMsgs.push("Tabela Clientes: " + c.error.message);
-
-                if (errorMsgs.length > 0) {
-                    alert("O sistema detetou que a leitura de algumas tabelas está a ser bloqueada pelo Supabase. Detalhes na consola (F12).");
-                    console.error("Bloqueios de leitura RLS:", errorMsgs);
-                }
 
                 APP.data.users = u.data || [];
                 APP.data.stock = s.data || [];
@@ -614,12 +597,9 @@
                     filter.style.display = 'block'; filter.innerHTML = '<option value="all">Ver Todos os Vendedores</option>'; 
                     selFilter.innerHTML = '<option value="all">Todos</option>';
                     
-                    // Remover duplicados da lista suspensa caso existam
                     const uniqueUsers = [];
                     APP.data.users.forEach(u => {
-                        if (!uniqueUsers.find(x => x.name === u.name)) {
-                            uniqueUsers.push(u);
-                        }
+                        if (!uniqueUsers.find(x => x.name === u.name)) uniqueUsers.push(u);
                     });
 
                     uniqueUsers.forEach(u => { 
@@ -787,7 +767,7 @@
                     list.ondrop = async (e) => {
                         e.preventDefault(); div.classList.remove('drag-over');
                         if (APP.dragId) {
-                            await dbClient.from('deals').update({stage: col.id}).eq('id', APP.dragId);
+                            await APP.updateStage(APP.dragId, col.id);
                             APP.dragId = null;
                         }
                     };
@@ -812,12 +792,10 @@
 
                 if (isGestorOrAssistente) {
                     ownerDiv.style.display = 'block';
-                    
                     const uniqueUsers = [];
                     APP.data.users.filter(u => u.role !== 'diretoria_restrita').forEach(u => {
                         if (!uniqueUsers.find(x => x.name === u.name)) uniqueUsers.push(u);
                     });
-
                     ownerSelect.innerHTML = uniqueUsers.map(u => `<option value="${u.name}" ${u.name === APP.user.name ? 'selected' : ''}>${u.name}</option>`).join('');
                 } else {
                     ownerDiv.style.display = 'none';
@@ -850,19 +828,16 @@
                     
                     if (existingClient) {
                         if (existingClient.obs !== cityInput) {
-                            await dbClient.from('clients').update({ obs: cityInput }).eq('id', existingClient.id);
-                            existingClient.obs = cityInput;
+                            const { error: err1 } = await dbClient.from('clients').update({ obs: cityInput }).eq('id', existingClient.id);
+                            if (err1) console.error("Erro ao atualizar cidade do cliente", err1);
                         }
                     } else {
-                        const { data: newClient, error: clientErr } = await dbClient.from('clients').insert({ name: clientName, obs: cityInput }).select();
-                        if (!clientErr && newClient) {
-                            APP.data.clients.push(newClient[0]);
-                        }
+                        const { error: err2 } = await dbClient.from('clients').insert({ name: clientName, obs: cityInput });
+                        if (err2) console.error("Erro ao criar novo cliente", err2);
                     }
                 }
 
                 if (id) {
-                    dealData.id = id;
                     const oldDeal = APP.data.deals.find(x => x.id === id);
                     if(oldDeal && oldDeal.stage === 'ganho' && dealData.stock_id !== oldDeal.stock_id) {
                         if(dealData.stock_id) {
@@ -872,37 +847,39 @@
                             dealData.original_cost = 0;
                         }
                     }
-                    if(!oldDeal.history) oldDeal.history = [];
-                    let newHist = oldDeal.history;
-                    if (dealData.next_date && (dealData.next_date !== oldDeal.next_date || dealData.next_desc !== oldDeal.next_desc)) {
+                    let newHist = oldDeal && oldDeal.history ? oldDeal.history : [];
+                    if (dealData.next_date && (dealData.next_date !== (oldDeal ? oldDeal.next_date : ''))) {
                         const dateBr = dealData.next_date.split('-').reverse().join('/');
-                        newHist.push({date: Date.now(), user: APP.user.name, action: 'Agenda', detail: `Nova ação: ${dateBr} - ${dealData.next_desc}`});
+                        newHist.push({date: new Date().toISOString(), user: APP.user.name, action: 'Agenda', detail: `Nova ação: ${dateBr} - ${dealData.next_desc}`});
                     }
                     dealData.history = newHist;
-                    const { data, error } = await dbClient.from('deals').update(dealData).eq('id', id).select();
-                    if(error) return alert("Erro: " + error.message);
-                    APP.refreshLocal('deals', data[0]);
+                    
+                    const { error } = await dbClient.from('deals').update(dealData).eq('id', id);
+                    if(error) return alert("Erro ao atualizar oportunidade: " + error.message);
                 } else {
                     dealData.stage = 'prospeccao';
-                    dealData.history = [{date: Date.now(), user: APP.user.name, action: 'Criação', detail: 'Oportunidade criada'}];
+                    dealData.history = [{date: new Date().toISOString(), user: APP.user.name, action: 'Criação', detail: 'Oportunidade criada'}];
                     if(dealData.next_date) {
                         const dateBr = dealData.next_date.split('-').reverse().join('/');
-                        dealData.history.push({date: Date.now(), user: APP.user.name, action: 'Agenda', detail: `Inicial: ${dateBr} - ${dealData.next_desc}`});
+                        dealData.history.push({date: new Date().toISOString(), user: APP.user.name, action: 'Agenda', detail: `Inicial: ${dateBr} - ${dealData.next_desc}`});
                     }
-                    const { data, error } = await dbClient.from('deals').insert(dealData).select();
-                    if(error) return alert("Erro: " + error.message);
-                    APP.refreshLocal('deals', data[0]);
+                    
+                    const { error } = await dbClient.from('deals').insert(dealData);
+                    if(error) return alert("Erro ao criar oportunidade: " + error.message);
                 }
                 
                 if(stockId) {
                     const s = APP.data.stock.find(x => x.id === stockId);
                     if(s && s.status !== 'Reservado' && s.status !== 'Vendido') {
                         const newHist = APP.addLog(s, 'Reservado', `Vinculado ao cliente ${dealData.client}`);
-                        await dbClient.from('stock').update({status: 'Reservado', history: newHist}).eq('id', stockId);
-                        s.status = 'Reservado'; 
+                        const { error: err3 } = await dbClient.from('stock').update({status: 'Reservado', history: newHist}).eq('id', stockId);
+                        if (err3) console.error("Erro ao reservar máquina", err3);
                     }
                 }
-                APP.closeModals(); APP.nav('funil');
+                
+                APP.closeModals(); 
+                APP.toast("Negócio Salvo!");
+                await APP.reloadTable('deals');
             },
 
             editDeal: (id) => { 
@@ -926,16 +903,18 @@
                 if (APP.user.role !== 'gestor') return alert('Acesso negado.');
                 if(confirm('Excluir permanentemente?')) {
                     const deal = APP.data.deals.find(d => d.id === id);
-                    await dbClient.from('deals').delete().eq('id', id);
+                    const { error } = await dbClient.from('deals').delete().eq('id', id);
+                    if (error) return alert("Erro ao apagar: " + error.message);
+
                     if(deal && deal.stock_id) {
                         const s = APP.data.stock.find(x => x.id === deal.stock_id);
                         if(s && (s.status === 'Reservado' || s.status === 'Em Disputa')) {
                             const newHist = APP.addLog(s, 'Liberação', 'Oportunidade excluída');
                             await dbClient.from('stock').update({status: 'Disponível', history: newHist}).eq('id', s.id);
-                            s.status = 'Disponível';
                         }
                     }
-                    APP.toast('Excluído!'); setTimeout(() => APP.reloadTable('deals'), 500);
+                    APP.toast('Excluído!'); 
+                    await APP.reloadTable('deals');
                 }
             },
 
@@ -960,7 +939,9 @@
                 }
                 
                 updates.history = APP.addLog(deal, 'Movimentação', `De ${oldStage.toUpperCase()} para ${stage.toUpperCase()}` + (motivoPerda ? ` (${motivoPerda})` : ''));
-                await dbClient.from('deals').update(updates).eq('id', id);
+                
+                const { error } = await dbClient.from('deals').update(updates).eq('id', id);
+                if (error) return alert("Erro ao mover cartão: " + error.message);
 
                 if (deal.stock_id) {
                     const s = APP.data.stock.find(x => x.id === deal.stock_id);
@@ -978,7 +959,7 @@
                         }
                     }
                 }
-                setTimeout(() => APP.reloadTable('deals'), 500);
+                await APP.reloadTable('deals');
             },
 
             // --- ESTOQUE ---
@@ -1042,22 +1023,35 @@
                 const id = document.getElementById('stk-id').value;
                 if(id) {
                     s.history = APP.addLog(APP.data.stock.find(x=>x.id===id), 'Edição', 'Atualizado');
-                    await dbClient.from('stock').update(s).eq('id',id);
+                    const { error } = await dbClient.from('stock').update(s).eq('id',id);
+                    if (error) return alert("Erro ao atualizar estoque: " + error.message);
                 } else {
-                    s.status = 'Disponível'; s.date_entry = new Date().toISOString(); s.history = [{date:Date.now(),user:APP.user.name,action:'Criação',detail:'Manual'}];
-                    await dbClient.from('stock').insert(s);
+                    s.status = 'Disponível'; s.date_entry = new Date().toISOString(); s.history = [{date:new Date().toISOString(),user:APP.user.name,action:'Criação',detail:'Manual'}];
+                    const { error } = await dbClient.from('stock').insert(s);
+                    if (error) return alert("Erro ao inserir estoque: " + error.message);
                 }
-                APP.closeModals(); setTimeout(() => APP.reloadTable('stock'), 500);
+                APP.closeModals(); 
+                APP.toast("Estoque Salvo!");
+                await APP.reloadTable('stock');
             },
             editStock: (id) => { const s=APP.data.stock.find(x=>x.id===id); document.getElementById('stk-id').value=s.id; document.getElementById('stk-model').value=s.model; document.getElementById('stk-mono').value=s.mono||''; document.getElementById('stk-type').value=s.type; document.getElementById('stk-cost').value=s.cost.toLocaleString('pt-BR',{minimumFractionDigits:2}); APP.modal('modal-stock'); },
-            deleteStock: async (id) => { if(APP.user.role!=='gestor')return; if(confirm('Excluir?')) { await dbClient.from('stock').delete().eq('id',id); APP.toast('Excluído'); setTimeout(() => APP.reloadTable('stock'), 500); } },
+            deleteStock: async (id) => { 
+                if(APP.user.role!=='gestor')return; 
+                if(confirm('Excluir máquina do sistema?')) { 
+                    const { error } = await dbClient.from('stock').delete().eq('id',id); 
+                    if (error) return alert("Erro ao apagar estoque: " + error.message);
+                    APP.toast('Excluído!'); 
+                    await APP.reloadTable('stock'); 
+                } 
+            },
             restoreStock: async (id) => {
                 if(confirm('Restaurar para Disponível?')) {
                     const item = APP.data.stock.find(s => s.id === id);
                     const deal = APP.data.deals.find(d => d.stock_id === id && d.stage === 'ganho');
                     if(deal) await dbClient.from('deals').update({stock_id: null}).eq('id', deal.id);
-                    await dbClient.from('stock').update({status: 'Disponível', history: APP.addLog(item, 'Restauração', 'Manual')}).eq('id', id);
-                    setTimeout(() => APP.reloadTable('stock'), 500);
+                    const { error } = await dbClient.from('stock').update({status: 'Disponível', history: APP.addLog(item, 'Restauração', 'Manual')}).eq('id', id);
+                    if (error) return alert("Erro: " + error.message);
+                    await APP.reloadTable('stock');
                 }
             },
             toggleStock: () => { const type = document.getElementById('deal-type').value; document.getElementById('div-stock-select').style.display = type === 'consorcio' ? 'none' : 'block'; },
@@ -1068,12 +1062,9 @@
                 const tbody = document.querySelector('#table-clients tbody');
                 if(!tbody) return;
                 
-                // Mostrar apenas um cliente por nome para evitar repetições
                 const uniqueClients = [];
                 APP.data.clients.forEach(c => {
-                    if (!uniqueClients.find(x => x.name === c.name)) {
-                        uniqueClients.push(c);
-                    }
+                    if (!uniqueClients.find(x => x.name === c.name)) uniqueClients.push(c);
                 });
 
                 tbody.innerHTML = uniqueClients.filter(c=>c.name.toLowerCase().includes(term)).map(c => {
@@ -1086,10 +1077,24 @@
                 e.preventDefault();
                 const c = { name: document.getElementById('cli-name').value, phone: document.getElementById('cli-phone').value, email: document.getElementById('cli-email').value, obs: document.getElementById('cli-obs').value, cpf_cnpj: document.getElementById('cli-cpf').value, doc_link: document.getElementById('cli-docs').value };
                 const id = document.getElementById('cli-id').value;
-                if(id) await dbClient.from('clients').update(c).eq('id',id); else await dbClient.from('clients').insert(c);
-                APP.closeModals(); setTimeout(() => APP.reloadTable('clients'), 500);
+                if(id) {
+                    const { error } = await dbClient.from('clients').update(c).eq('id',id);
+                    if (error) return alert("Erro ao atualizar cliente: " + error.message);
+                } else {
+                    const { error } = await dbClient.from('clients').insert(c);
+                    if (error) return alert("Erro ao cadastrar cliente: " + error.message);
+                }
+                APP.closeModals(); 
+                APP.toast("Cliente Salvo!");
+                await APP.reloadTable('clients');
             },
-            deleteClient: async (id) => { if(confirm('Excluir cliente?')) { await dbClient.from('clients').delete().eq('id',id); setTimeout(() => APP.reloadTable('clients'), 500); } },
+            deleteClient: async (id) => { 
+                if(confirm('Excluir cliente permanentemente?')) { 
+                    const { error } = await dbClient.from('clients').delete().eq('id',id); 
+                    if (error) return alert("Erro: " + error.message);
+                    await APP.reloadTable('clients'); 
+                } 
+            },
             editClient: (id) => { const c = APP.data.clients.find(x=>x.id===id); if(c) { document.getElementById('cli-id').value=c.id; document.getElementById('cli-name').value=c.name; document.getElementById('cli-phone').value=c.phone||''; document.getElementById('cli-email').value=c.email||''; document.getElementById('cli-obs').value=c.obs||''; document.getElementById('cli-cpf').value=c.cpf_cnpj||''; document.getElementById('cli-docs').value=c.doc_link||''; APP.modal('modal-client'); } },
 
             // --- USUARIOS ---
@@ -1097,13 +1102,12 @@
                 const tbody = document.querySelector('#table-users tbody'); if(!tbody) return;
                 const isG = APP.user.role === 'gestor';
                 
-                // Mostrar apenas um usuário por nome
                 const uniqueUsers = [];
                 APP.data.users.forEach(u => {
                     if (!uniqueUsers.find(x => x.name === u.name)) uniqueUsers.push(u);
                 });
 
-                tbody.innerHTML = uniqueUsers.map(u => `<tr><td>${u.name}</td><td>${u.role}</td><td><small style="color:#9ca3af">${u.auth_id||'-'}</small></td><td>${u.goal?u.goal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'-'}</td><td>${isG?`<button onclick="APP.editUser('${u.id}')" class="btn btn-small btn-main">✏️</button>`:''}</td></tr>`).join('');
+                tbody.innerHTML = uniqueUsers.map(u => `<tr><td>${u.name}</td><td>${u.role}</td><td><small style="color:#9ca3af">${u.auth_id||'-'}</small></td><td>${u.goal?u.goal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'-'}</td><td>${isG?`<button onclick="APP.editUser('${u.id}')" class="btn btn-small btn-main">✏️</button> <button onclick="APP.deleteUser('${u.id}')" class="btn btn-small btn-danger">×</button>`:''}</td></tr>`).join('');
                 
                 const tbPerf = document.querySelector('#table-performance tbody');
                 if (tbPerf) {
@@ -1127,8 +1131,23 @@
                 e.preventDefault(); if(APP.user.role!=='gestor') return alert('Sem permissão');
                 const u = { name: document.getElementById('usr-name').value, auth_id: document.getElementById('usr-auth').value, role: document.getElementById('usr-role').value, goal: APP.parseMoney(document.getElementById('usr-goal').value) };
                 const id = document.getElementById('usr-id').value;
-                if(id) await dbClient.from('users').update(u).eq('id',id); else await dbClient.from('users').insert(u);
-                APP.closeModals(); setTimeout(() => APP.reloadTable('users'), 500);
+                if(id) {
+                    const { error } = await dbClient.from('users').update(u).eq('id',id);
+                    if (error) return alert("Erro ao atualizar utilizador: " + error.message);
+                } else {
+                    const { error } = await dbClient.from('users').insert(u);
+                    if (error) return alert("Erro ao cadastrar utilizador: " + error.message);
+                }
+                APP.closeModals(); APP.toast("Utilizador Salvo!"); await APP.reloadTable('users');
+            },
+            deleteUser: async (id) => {
+                if(APP.user.role!=='gestor') return;
+                if(confirm('Tem a certeza que quer apagar este utilizador? O login do utilizador deixará de funcionar imediatamente.')) {
+                    const { error } = await dbClient.from('users').delete().eq('id', id);
+                    if (error) return alert("Erro ao apagar utilizador: " + error.message);
+                    APP.toast('Utilizador Excluído!');
+                    await APP.reloadTable('users');
+                }
             },
 
             // --- KPIS & REPORTS ---
@@ -1306,7 +1325,6 @@
             renderGoals: () => {
                 const container = document.getElementById('goals-container'); if(!container) return;
                 
-                // Mostrar apenas uma meta por vendedor na equipa
                 const uniqueSellers = [];
                 APP.data.users.filter(u => u.role === 'vendedor' && u.goal > 0).forEach(u => {
                     if (!uniqueSellers.find(x => x.name === u.name)) uniqueSellers.push(u);
@@ -1376,6 +1394,11 @@
             },
 
             // --- UTILS ---
+            addLog: (item, action, detail) => {
+                let hist = (item && item.history) ? item.history : [];
+                hist.push({ date: new Date().toISOString(), user: APP.user ? APP.user.name : 'Sistema', action: action, detail: detail });
+                return hist;
+            },
             logout: async () => { 
                 await dbClient.auth.signOut(); 
                 window.location.reload(); 
