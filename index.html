@@ -507,7 +507,9 @@
                 dbClient.auth.onAuthStateChange((event, session) => {
                     if (event === 'SIGNED_OUT') {
                         APP.user = null;
+                        APP.data = { stock: [], users: [], deals: [], clients: [] };
                         document.getElementById('user-overlay').style.display = 'flex';
+                        document.getElementById('user-info').innerText = '';
                     }
                 });
             },
@@ -1400,8 +1402,8 @@
                 return hist;
             },
             logout: async () => { 
-                await dbClient.auth.signOut(); 
-                window.location.reload(); 
+                await dbClient.auth.signOut();
+                setTimeout(() => window.location.reload(), 300);
             },
             modal: (id) => document.getElementById(id).classList.add('active'),
             closeModals: () => { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); document.querySelectorAll('form').forEach(f => f.reset()); },
