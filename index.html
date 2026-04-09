@@ -1198,8 +1198,10 @@
                 
                 const tbPerf = document.querySelector('#table-performance tbody');
                 if (tbPerf) {
+                    const DASH_EXCLUDED = ['TIAGO CABRAL', 'MARCELO'];
+                    const isExcludedDash = (name) => DASH_EXCLUDED.some(n => (name||'').toUpperCase().includes(n));
                     let ranking = [];
-                    tbPerf.innerHTML = uniqueUsers.map(u => {
+                    tbPerf.innerHTML = uniqueUsers.filter(u => !isExcludedDash(u.name)).map(u => {
                         const userDeals = APP.data.deals.filter(d => d.owner === u.name);
                         const open = userDeals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido').length;
                         const wonDeals = userDeals.filter(d => d.stage === 'ganho');
@@ -1308,8 +1310,25 @@
             // --- MAPAS, CATALOGO, AGENDA, GRAFICOS ---
             _cityCoordCache: JSON.parse(localStorage.getItem('trail_city_cache') || '{}'),
             _sellerColors: ['#e63946','#2a9d8f','#e9c46a','#f4a261','#264653','#8ecae6','#a8dadc','#457b9d','#6a4c93','#f77f00','#06d6a0','#ef476f','#118ab2','#ffd166','#073b4c'],
+            // Paleta fixa: cada vendedor tem sempre a mesma cor distinta
+            _fixedSellerColors: {
+                'ARLEN SOARES':    '#e63946', // vermelho vivo
+                'RICHARD LEITE':   '#2a9d8f', // verde-azulado
+                'EDUARDO GONTIJO': '#f4a261', // laranja
+                'GUSTAVO CAIRES':  '#1d3557', // azul-marinho escuro
+                'TIAGO CABRAL':    '#8ecae6', // azul claro
+                'WILSON FROES':    '#a8dadc', // ciano
+                'MARCELO':         '#6a4c93', // roxo
+            },
 
             getSellerColor: (sellerName) => {
+                const key = (sellerName || '').toUpperCase().trim();
+                // Verifica pelo nome exato primeiro
+                if (APP._fixedSellerColors[key]) return APP._fixedSellerColors[key];
+                // Verifica se o nome contém alguma chave (ex: "MARCELO SILVA" → 'MARCELO')
+                const match = Object.keys(APP._fixedSellerColors).find(k => key.includes(k));
+                if (match) return APP._fixedSellerColors[match];
+                // Fallback para vendedores não mapeados
                 if (!APP._sellerColorMap) APP._sellerColorMap = {};
                 if (!APP._sellerColorMap[sellerName]) {
                     const usedCount = Object.keys(APP._sellerColorMap).length;
@@ -1346,7 +1365,12 @@
 
                 const normalize = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
 
+                // Vendedores ocultos no mapa (internos/gestão)
+                const MAP_EXCLUDED = ['TIAGO CABRAL', 'MARCELO', 'WILSON FROES'];
+                const isExcludedMap = (name) => MAP_EXCLUDED.some(n => (name||'').toUpperCase().includes(n));
+
                 let filtered = APP.mapView === 'won' ? APP.data.deals.filter(d => d.stage === 'ganho') : APP.data.deals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido');
+                filtered = filtered.filter(d => !isExcludedMap(d.owner));
 
                 // Coleta cidades únicas que precisam de geocodificação externa
                 const citiesToGeocode = new Set();
