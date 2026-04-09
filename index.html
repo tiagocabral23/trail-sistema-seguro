@@ -1302,31 +1302,66 @@
             },
 
             // --- MAPAS, CATALOGO, AGENDA, GRAFICOS ---
+            _cityCoordCache: JSON.parse(localStorage.getItem('trail_city_cache') || '{}'),
+
+            geocodeCity: async (cityName) => {
+                if (MG_CITIES_COORDS[cityName]) return MG_CITIES_COORDS[cityName];
+                const normalize = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
+                const localKey = Object.keys(MG_CITIES_COORDS).find(k => normalize(k) === normalize(cityName));
+                if (localKey) return MG_CITIES_COORDS[localKey];
+                if (APP._cityCoordCache[cityName]) return APP._cityCoordCache[cityName];
+                try {
+                    const query = encodeURIComponent(cityName + ', Brasil');
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`);
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                        APP._cityCoordCache[cityName] = coords;
+                        localStorage.setItem('trail_city_cache', JSON.stringify(APP._cityCoordCache));
+                        console.log(`📍 Geocodificado e salvo: ${cityName}`, coords);
+                        return coords;
+                    }
+                } catch(e) { console.warn('Geocode falhou para:', cityName); }
+                return null;
+            },
+
             renderMap: async () => {
                 const container = document.getElementById('map'); if(!container) return;
                 if(!APP.map) { APP.map = L.map('map').setView([-16.7289, -43.8617], 7); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(APP.map); }
                 APP.map.invalidateSize(); APP.map.eachLayer((layer) => { if (layer instanceof L.CircleMarker) APP.map.removeLayer(layer); });
-                
+
+                const normalize = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
+
                 let filtered = APP.mapView === 'won' ? APP.data.deals.filter(d => d.stage === 'ganho') : APP.data.deals.filter(d => d.stage !== 'ganho' && d.stage !== 'perdido');
+
+                // Coleta cidades únicas que precisam de geocodificação externa
+                const citiesToGeocode = new Set();
+                filtered.forEach(d => {
+                    const cityName = d.city || '';
+                    if (!cityName) return;
+                    const inList = Object.keys(MG_CITIES_COORDS).find(k => normalize(k) === normalize(cityName));
+                    if (!inList && !APP._cityCoordCache[cityName]) citiesToGeocode.add(cityName);
+                });
+
+                // Geocodifica apenas as cidades desconhecidas (com delay para respeitar rate limit)
+                for (const city of citiesToGeocode) {
+                    await APP.geocodeCity(city);
+                    await new Promise(r => setTimeout(r, 350));
+                }
+
+                // Agrega por cidade + vendedor
                 const agg = {};
                 filtered.forEach(d => {
-                    const client = APP.data.clients.find(c => c.name === d.client);
-                    // Busca a cidade pelo campo city do deal, ou pelo campo obs do cliente como fallback
-                    let cityKey = null;
-                    if (d.city) {
-                        cityKey = Object.keys(MG_CITIES_COORDS).find(k => k.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase() === d.city.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase());
-                    }
-                    if (!cityKey && client && client.obs) {
-                        const obsCity = client.obs.split('-')[0].trim();
-                        cityKey = Object.keys(MG_CITIES_COORDS).find(k => k.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase() === obsCity.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase());
-                    }
-                    if(cityKey) {
-                        const key = cityKey + '_' + d.owner;
-                        if(!agg[key]) agg[key] = {city: cityKey, seller: d.owner, lat: MG_CITIES_COORDS[cityKey][0], lng: MG_CITIES_COORDS[cityKey][1], val: 0, count: 0};
-                        agg[key].val += d.value; agg[key].count++;
-                    }
+                    const cityName = d.city || '';
+                    if (!cityName) return;
+                    const cityKey = Object.keys(MG_CITIES_COORDS).find(k => normalize(k) === normalize(cityName)) || cityName;
+                    const coords = MG_CITIES_COORDS[cityKey] || APP._cityCoordCache[cityName];
+                    if (!coords) return;
+                    const key = cityKey + '_' + d.owner;
+                    if (!agg[key]) agg[key] = { city: cityKey, seller: d.owner, lat: coords[0], lng: coords[1], val: 0, count: 0 };
+                    agg[key].val += d.value; agg[key].count++;
                 });
-                
+
                 const legendEl = document.getElementById('map-legend'); if(legendEl) legendEl.innerHTML = '<strong>Vendedores</strong>';
                 const sellers = new Set();
                 Object.values(agg).forEach(item => {
@@ -1338,7 +1373,7 @@
                     marker.on('click', () => {
                         const tb = document.querySelector('#table-map-details tbody');
                         document.getElementById('map-detail-title').innerText = `Detalhes: ${item.city} (${item.seller})`;
-                        tb.innerHTML = filtered.filter(d => d.owner===item.seller && (APP.data.clients.find(c=>c.name===d.client)?.obs||'').includes(item.city)).map(d => `<tr><td>${d.client}</td><td style="font-weight:bold;">${d.value.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td><span class="badge badge-success">${d.stage}</span></td></tr>`).join('') || '<tr><td colspan="3">Vazio</td></tr>';
+                        tb.innerHTML = filtered.filter(d => d.owner === item.seller && d.city === item.city).map(d => `<tr><td>${d.client}</td><td style="font-weight:bold;">${d.value.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td><span class="badge badge-success">${d.stage}</span></td></tr>`).join('') || '<tr><td colspan="3">Vazio</td></tr>';
                         APP.modal('modal-map-details');
                     });
                 });
