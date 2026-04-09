@@ -314,6 +314,7 @@
                 <div id="stock-exec-dash" class="inventory-panel-grid gestor-ctrl" style="margin-bottom: 25px;"></div>
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="search-stock" onkeyup="APP.renderStock()" placeholder="Buscar..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
+                    <button id="btn-import-stock" class="btn btn-dark gestor-ctrl" onclick="APP.prepareImportStock()" style="white-space:nowrap;">📥 Importar Planilha</button>
                     <button id="btn-new-stock" class="btn btn-main gestor-ctrl" onclick="APP.prepareStock()">+ Novo Item</button>
                 </div>
                 <div class="data-card">
@@ -413,6 +414,60 @@
                 <button class="btn btn-main" style="width:100%">Salvar ao Estoque</button>
                 <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%;margin-top:5px">Cancelar</button>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL IMPORTAÇÃO DE ESTOQUE -->
+    <div id="modal-import-stock" class="modal">
+        <div class="modal-box" style="width:720px; max-width:95vw;">
+            <h3>📥 Importar Estoque por Planilha</h3>
+
+            <!-- Passo 1: upload -->
+            <div id="import-step-1">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin:15px 0; font-size:12px; color:#065f46;">
+                    <strong>Colunas aceitas na planilha (Excel .xlsx ou .csv):</strong><br><br>
+                    <span style="font-family:monospace; background:#dcfce7; padding:2px 6px; border-radius:3px; margin-right:4px;">Tipo</span>
+                    <span style="font-family:monospace; background:#dcfce7; padding:2px 6px; border-radius:3px; margin-right:4px;">Modelo</span>
+                    <span style="font-family:monospace; background:#dcfce7; padding:2px 6px; border-radius:3px; margin-right:4px;">Chassi</span>
+                    <span style="font-family:monospace; background:#dcfce7; padding:2px 6px; border-radius:3px;">Custo</span>
+                    <br><span style="color:#6b7280; margin-top:6px; display:block;">• A ordem das colunas não importa. Nomes aceitam variações (ex: "custo base", "chassis", "serial").</span>
+                    <span style="color:#6b7280;">• Tipo aceita: <b>Trator</b>, <b>Implemento</b>, <b>Outros</b>. Se omitido, assume "Outros".</span>
+                </div>
+                <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                    <label style="display:flex; flex-direction:column; flex:1; min-width:200px; font-size:10px; font-weight:800; text-transform:uppercase; color:#4b5563; gap:4px;">
+                        Selecionar arquivo (.xlsx, .xls, .csv)
+                        <input type="file" id="import-stock-file" accept=".xlsx,.xls,.csv" onchange="APP.handleImportFile(event)" style="padding:8px; border:1px solid #d1d5db; border-radius:6px; background:#fff; font-size:12px;">
+                    </label>
+                    <button type="button" onclick="APP.downloadImportTemplate()" class="btn btn-dark" style="white-space:nowrap;">⬇️ Baixar Modelo .xlsx</button>
+                </div>
+                <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:15px;">Cancelar</button>
+            </div>
+
+            <!-- Passo 2: preview -->
+            <div id="import-step-2" style="display:none;">
+                <div id="import-summary" style="margin:12px 0; font-size:12px; font-weight:700; color:#1f2937;"></div>
+                <div style="max-height:280px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead>
+                            <tr style="background:#1f2937; color:#fbbf24; position:sticky; top:0; z-index:1;">
+                                <th style="padding:8px 10px; text-align:left;">#</th>
+                                <th style="padding:8px 10px; text-align:left;">Tipo</th>
+                                <th style="padding:8px 10px; text-align:left;">Modelo</th>
+                                <th style="padding:8px 10px; text-align:left;">Chassi</th>
+                                <th style="padding:8px 10px; text-align:left;">Custo</th>
+                                <th style="padding:8px 10px; text-align:left;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-preview-body"></tbody>
+                    </table>
+                </div>
+                <div id="import-errors" style="display:none; margin-top:10px; background:#fff5f5; border:1px solid #fecaca; border-radius:6px; padding:10px; font-size:11px; color:#991b1b;"></div>
+                <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
+                    <button type="button" onclick="APP.confirmImportStock()" id="btn-confirm-import" class="btn btn-main" style="flex:1;">✅ Confirmar Importação</button>
+                    <button type="button" onclick="APP.resetImportModal()" class="btn" style="flex:1;">↩️ Outro arquivo</button>
+                    <button type="button" onclick="APP.closeModals()" class="btn btn-danger">Cancelar</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1171,7 +1226,157 @@
             },
             toggleStock: () => { const type = document.getElementById('deal-type').value; document.getElementById('div-stock-select').style.display = type === 'consorcio' ? 'none' : 'block'; },
 
-            // --- CLIENTES ---
+            // --- IMPORTAÇÃO DE ESTOQUE POR PLANILHA ---
+            _importRows: [],
+
+            prepareImportStock: () => {
+                if (APP.user.role !== 'gestor' && APP.user.role !== 'assistente') return alert('Acesso negado.');
+                APP._importRows = [];
+                APP.resetImportModal();
+                APP.modal('modal-import-stock');
+            },
+
+            resetImportModal: () => {
+                document.getElementById('import-stock-file').value = '';
+                document.getElementById('import-step-1').style.display = 'block';
+                document.getElementById('import-step-2').style.display = 'none';
+                document.getElementById('import-errors').style.display = 'none';
+                document.getElementById('import-preview-body').innerHTML = '';
+                APP._importRows = [];
+            },
+
+            handleImportFile: (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                        if (!raw.length) { alert('Planilha vazia ou sem dados.'); return; }
+
+                        // Mapeia colunas de forma flexível (case-insensitive, sem acento)
+                        const norm = s => s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+                        const findCol = (row, variants) => {
+                            const keys = Object.keys(row);
+                            const match = keys.find(k => variants.some(v => norm(k).includes(norm(v))));
+                            return match || null;
+                        };
+
+                        const sample = raw[0];
+                        const colTipo   = findCol(sample, ['tipo', 'type', 'categoria']);
+                        const colModelo = findCol(sample, ['modelo', 'model', 'descricao', 'descr', 'nome']);
+                        const colChassi = findCol(sample, ['chassi', 'chassis', 'mono', 'serie', 'serial', 'num']);
+                        const colCusto  = findCol(sample, ['custo', 'cost', 'preco', 'valor', 'price']);
+
+                        if (!colModelo) { alert('Coluna "Modelo" não encontrada. Verifique o cabeçalho da planilha.'); return; }
+                        if (!colCusto)  { alert('Coluna "Custo" não encontrada. Verifique o cabeçalho da planilha.'); return; }
+
+                        const TIPOS_VALIDOS = ['Trator', 'Implemento', 'Outros'];
+                        const normalizeTipo = (v) => {
+                            const u = (v || '').toString().trim();
+                            const match = TIPOS_VALIDOS.find(t => t.toLowerCase() === u.toLowerCase());
+                            return match || 'Outros';
+                        };
+
+                        const rows = []; const erros = [];
+                        raw.forEach((r, i) => {
+                            const modelo = (r[colModelo] || '').toString().trim();
+                            const custoRaw = (r[colCusto] || '').toString();
+                            const custo = APP.parseMoney(custoRaw);
+                            if (!modelo) { erros.push(`Linha ${i+2}: Modelo vazio — ignorada.`); return; }
+                            if (!custo || isNaN(custo)) { erros.push(`Linha ${i+2}: Custo inválido ("${custoRaw}") — ignorada.`); return; }
+                            rows.push({
+                                type:  normalizeTipo(colTipo ? r[colTipo] : ''),
+                                model: modelo,
+                                mono:  colChassi ? (r[colChassi] || '').toString().trim() : '',
+                                cost:  custo,
+                            });
+                        });
+
+                        APP._importRows = rows;
+
+                        // Renderiza preview
+                        const tbody = document.getElementById('import-preview-body');
+                        tbody.innerHTML = rows.map((r, i) => `
+                            <tr style="background:${i%2===0?'#fff':'#f9fafb'}; border-bottom:1px solid #f3f4f6;">
+                                <td style="padding:7px 10px; color:#9ca3af;">${i+1}</td>
+                                <td style="padding:7px 10px;">${r.type}</td>
+                                <td style="padding:7px 10px; font-weight:700;">${r.model}</td>
+                                <td style="padding:7px 10px; color:#6b7280;">${r.mono || '—'}</td>
+                                <td style="padding:7px 10px; font-weight:700; color:#059669;">${r.cost.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+                                <td style="padding:7px 10px;"><span style="background:#d1fae5;color:#065f46;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">Disponível</span></td>
+                            </tr>`).join('');
+
+                        const sumEl = document.getElementById('import-summary');
+                        sumEl.innerHTML = `<span style="color:#059669;">✅ ${rows.length} item(ns) prontos para importar</span>` +
+                            (erros.length ? ` &nbsp;·&nbsp; <span style="color:#b45309;">⚠️ ${erros.length} linha(s) ignorada(s)</span>` : '');
+
+                        if (erros.length) {
+                            const errEl = document.getElementById('import-errors');
+                            errEl.style.display = 'block';
+                            errEl.innerHTML = '<strong>Linhas ignoradas:</strong><br>' + erros.join('<br>');
+                        }
+
+                        document.getElementById('btn-confirm-import').disabled = rows.length === 0;
+                        document.getElementById('import-step-1').style.display = 'none';
+                        document.getElementById('import-step-2').style.display = 'block';
+                    } catch(err) {
+                        alert('Erro ao ler o arquivo. Verifique se é um .xlsx ou .csv válido.\n' + err.message);
+                    }
+                };
+                reader.readAsBinaryString(file);
+            },
+
+            confirmImportStock: async () => {
+                if (!APP._importRows.length) return;
+                const btn = document.getElementById('btn-confirm-import');
+                btn.disabled = true;
+                btn.innerText = '⏳ Importando...';
+
+                const now = new Date().toISOString();
+                const items = APP._importRows.map(r => ({
+                    ...r,
+                    status: 'Disponível',
+                    date_entry: now,
+                    history: [{ date: now, user: APP.user.name, action: 'Importação', detail: `Importado via planilha` }]
+                }));
+
+                // Insere em lotes de 50 para não sobrecarregar
+                const BATCH = 50;
+                let total = 0;
+                for (let i = 0; i < items.length; i += BATCH) {
+                    const batch = items.slice(i, i + BATCH);
+                    const { error } = await dbClient.from('stock').insert(batch);
+                    if (error) {
+                        alert(`Erro ao importar lote ${Math.floor(i/BATCH)+1}: ${error.message}`);
+                        btn.disabled = false; btn.innerText = '✅ Confirmar Importação';
+                        return;
+                    }
+                    total += batch.length;
+                    btn.innerText = `⏳ ${total}/${items.length} importados...`;
+                }
+
+                APP.closeModals();
+                APP.toast(`✅ ${total} item(ns) importados com sucesso!`);
+                await APP.reloadTable('stock');
+            },
+
+            downloadImportTemplate: () => {
+                const ws = XLSX.utils.aoa_to_sheet([
+                    ['Tipo', 'Modelo', 'Chassi', 'Custo'],
+                    ['Trator', 'Massey Ferguson 7S.210', 'MF7S210-001', '650000'],
+                    ['Implemento', 'Grade Aradora 14x28', 'GA-14-002', '85000'],
+                    ['Outros', 'Carreta Graneleira 15T', '', '42000'],
+                ]);
+                ws['!cols'] = [{wch:14},{wch:35},{wch:20},{wch:14}];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
+                XLSX.writeFile(wb, 'modelo_importacao_estoque.xlsx');
+            },
             renderClients: () => {
                 const term = document.getElementById('search-client').value.toLowerCase();
                 const tbody = document.querySelector('#table-clients tbody');
