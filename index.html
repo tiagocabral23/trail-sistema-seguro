@@ -387,6 +387,11 @@
                 <div class="form-item"><label>Tipo</label><select id="deal-type" onchange="APP.toggleStock()"><option value="maquina">Máquina</option><option value="consorcio">Consórcio</option></select></div>
                 <div class="form-item" id="div-stock-select"><label>Vincular Máquina</label><select id="deal-stock"></select></div>
                 <hr style="border:0; border-top:1px solid #e5e7eb; margin:15px 0;">
+                <div class="form-item" id="div-deal-close-date" style="display:none;">
+                    <label style="color:#b45309;">📅 Data de Fechamento da Venda</label>
+                    <input type="date" id="deal-close-date">
+                    <small style="display:block; color:#9ca3af; font-size:10px; margin-top:4px;">⚠️ Altere apenas para corrigir o mês. Afeta relatórios e metas.</small>
+                </div>
                 <h4 style="margin-bottom:10px; font-size:12px; color:#4b5563;">Agendar Próxima Ação</h4>
                 <div class="form-item"><label>Data Limite</label><input type="date" id="deal-next-date"></div>
                 <div class="form-item"><label>Descrição (O que fazer?)</label><input type="text" id="deal-next-desc" placeholder="Ex: Ligar para confirmar, Visita técnica..."></div>
@@ -933,10 +938,21 @@
                             dealData.original_cost = 0;
                         }
                     }
+                    // Salva data de fechamento editada (apenas para negócios ganhos)
+                    const closeDateVal = document.getElementById('deal-close-date').value;
+                    if (oldDeal && oldDeal.stage === 'ganho' && closeDateVal) {
+                        const newCloseDate = new Date(closeDateVal + 'T12:00:00').toISOString();
+                        if (newCloseDate.split('T')[0] !== (oldDeal.close_date || '').split('T')[0]) {
+                            dealData.close_date = newCloseDate;
+                        }
+                    }
                     let newHist = oldDeal && oldDeal.history ? oldDeal.history : [];
                     if (dealData.next_date && (dealData.next_date !== (oldDeal ? oldDeal.next_date : ''))) {
                         const dateBr = dealData.next_date.split('-').reverse().join('/');
                         newHist.push({date: new Date().toISOString(), user: APP.user.name, action: 'Agenda', detail: `Nova ação: ${dateBr} - ${dealData.next_desc}`});
+                    }
+                    if (dealData.close_date && oldDeal && dealData.close_date !== oldDeal.close_date) {
+                        newHist.push({date: new Date().toISOString(), user: APP.user.name, action: 'Correção', detail: `Data de fechamento alterada para ${closeDateVal.split('-').reverse().join('/')}`});
                     }
                     dealData.history = newHist;
                     
@@ -982,6 +998,16 @@
                 document.getElementById('deal-next-date').value = d.next_date || ''; 
                 document.getElementById('deal-next-desc').value = d.next_desc || ''; 
                 if (document.getElementById('deal-owner')) document.getElementById('deal-owner').value = d.owner;
+                // Mostra campo de data de fechamento apenas para gestor/assistente em negócios ganhos
+                const closeDateDiv = document.getElementById('div-deal-close-date');
+                const closeDateInput = document.getElementById('deal-close-date');
+                if (d.stage === 'ganho' && ['gestor','assistente'].includes(APP.user.role)) {
+                    closeDateDiv.style.display = 'block';
+                    closeDateInput.value = d.close_date ? d.close_date.split('T')[0] : '';
+                } else {
+                    closeDateDiv.style.display = 'none';
+                    closeDateInput.value = '';
+                }
                 APP.toggleStock();
             },
 
@@ -1019,7 +1045,10 @@
                 }
                 
                 if (stage === 'ganho' && oldStage !== 'ganho') {
-                    updates.close_date = new Date().toISOString();
+                    // Preserva a data original se já existir — evita que re-mover o card altere o mês
+                    if (!deal.close_date) {
+                        updates.close_date = new Date().toISOString();
+                    }
                     const s = APP.data.stock.find(x => x.id === deal.stock_id);
                     updates.original_cost = s ? s.cost : 0;
                 }
