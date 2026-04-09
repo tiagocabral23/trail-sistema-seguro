@@ -564,13 +564,15 @@
             applyPermissions: () => {
                 const isG = APP.user.role === 'gestor' || APP.user.role === 'assistente';
                 const isDir = APP.user.role === 'diretoria_restrita';
+                const btnBackup = document.getElementById('btn-global-backup');
 
                 if (isDir) {
                     document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'none');
-                    document.getElementById('btn-diretoria').style.display = 'flex';
-                    document.getElementById('btn-global-backup').style.display = 'none';
+                    const btnDir = document.getElementById('btn-diretoria');
+                    if (btnDir) btnDir.style.display = 'flex';
+                    if (btnBackup) btnBackup.style.display = 'none';
                 } else {
-                    document.getElementById('btn-global-backup').style.display = 'inline-flex';
+                    if (btnBackup) btnBackup.style.display = 'inline-flex';
                     document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'flex');
                     document.querySelectorAll('.gestor-ctrl').forEach(el => el.style.display = isG ? 'flex' : 'none');
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = APP.user.role === 'gestor' ? 'flex' : 'none');
