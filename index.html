@@ -377,7 +377,7 @@
                 <input type="hidden" id="deal-id">
                 <div class="form-item" id="div-deal-owner" style="display:none;"><label>Responsável (Vendedor)</label><select id="deal-owner" style="background:#fefce8; border-color:#f59e0b;"></select></div>
                 <div class="form-item"><label>Cliente</label><input id="deal-client" list="list-clients" required placeholder="Digite ou selecione..."><datalist id="list-clients"></datalist></div>
-                <div class="form-item"><label>Cidade / Local (Mapa)</label><input id="deal-city" list="list-cities-mg" placeholder="Selecione a cidade..."><datalist id="list-cities-mg"></datalist></div>
+                <div class="form-item"><label>Cidade / Local (Mapa)</label><input id="deal-city" list="list-cities-mg" placeholder="Digite ou selecione a cidade..." autocomplete="off"><datalist id="list-cities-mg"></datalist></div>
                 <div class="form-item">
                     <label>Origem do Lead</label>
                     <select id="deal-source"><option value="Loja/Passante">Loja / Passante</option><option value="Indicacao">Indicação</option><option value="Visita">Visita</option><option value="Instagram">Instagram / Facebook</option><option value="Google">Google / Site</option><option value="Feira">Feira / Evento</option><option value="Outros">Outros</option></select>
@@ -483,13 +483,91 @@
         var mixChart = null;
 
         var MG_CITIES_COORDS = {
-            "Águas Vermelhas": [-15.74, -41.46], "Bocaiúva": [-17.10, -43.81], "Brasília de Minas": [-16.20, -44.43], "Capitão Enéas": [-16.32, -43.70],
-            "Coração de Jesus": [-16.68, -44.36], "Espinosa": [-14.92, -42.81], "Francisco Sá": [-16.47, -43.48], "Grão Mogol": [-16.56, -42.89],
-            "Icaraí de Minas": [-16.18, -44.90], "Itacarambi": [-15.10, -44.09], "Jaíba": [-15.34, -43.67], "Janaúba": [-15.80, -43.30],
-            "Januária": [-15.48, -44.36], "Manga": [-14.75, -43.93], "Mato Verde": [-15.39, -42.86], "Mirabela": [-16.26, -44.16],
-            "Montalvânia": [-14.42, -44.36], "Monte Azul": [-15.15, -42.87], "Montes Claros": [-16.72, -43.86], "Pirapora": [-17.34, -44.94],
-            "Porteirinha": [-15.73, -43.02], "Rio Pardo de Minas": [-15.61, -42.53], "Salinas": [-16.17, -42.29], "São Francisco": [-16.15, -44.86],
-            "Taiobeiras": [-15.80, -42.22], "Varzelândia": [-15.70, -44.02], "Buritizeiro": [-17.35, -44.96]
+            "Montes Claros": [-16.72, -43.86],
+            "Bocaiúva": [-17.10, -43.81],
+            "Buritizeiro": [-17.35, -44.96],
+            "Campo Azul": [-16.39, -44.69],
+            "Claro dos Poções": [-16.29, -44.21],
+            "Coração de Jesus": [-16.68, -44.36],
+            "Engenheiro Navarro": [-17.19, -43.95],
+            "Francisco Dumont": [-17.32, -43.85],
+            "Glaucilândia": [-16.95, -43.66],
+            "Guaraciama": [-16.98, -43.53],
+            "Ibiaí": [-16.86, -44.92],
+            "Jequitaí": [-17.23, -44.43],
+            "Juramento": [-16.85, -43.67],
+            "Lagoa dos Patos": [-16.97, -44.56],
+            "Olhos D'Água": [-17.38, -44.08],
+            "Pirapora": [-17.34, -44.94],
+            "Ponto Chique": [-16.69, -45.15],
+            "São João da Lagoa": [-16.88, -44.32],
+            "São João do Pacuí": [-16.55, -44.98],
+            "Januária": [-15.48, -44.36],
+            "Bonito de Minas": [-15.32, -45.17],
+            "Brasília de Minas": [-16.20, -44.43],
+            "Chapada Gaúcha": [-15.26, -45.63],
+            "Cônego Marinho": [-15.52, -44.42],
+            "Icaraí de Minas": [-16.18, -44.90],
+            "Itacarambi": [-15.10, -44.09],
+            "Japonvar": [-16.07, -44.27],
+            "Lontra": [-15.91, -44.33],
+            "Luislândia": [-16.10, -44.68],
+            "Mirabela": [-16.26, -44.16],
+            "Patis": [-16.45, -44.09],
+            "Pedras de Maria da Cruz": [-15.60, -44.39],
+            "Pintópolis": [-15.47, -45.16],
+            "São Francisco": [-15.95, -44.86],
+            "São João da Ponte": [-15.93, -44.01],
+            "São João das Missões": [-14.89, -44.07],
+            "Ubaí": [-16.27, -44.77],
+            "Varzelândia": [-15.70, -44.02],
+            "Janaúba": [-15.80, -43.30],
+            "Capitão Enéas": [-16.32, -43.70],
+            "Catuti": [-15.26, -42.98],
+            "Espinosa": [-14.92, -42.81],
+            "Gameleiras": [-15.44, -42.74],
+            "Ibiracatu": [-15.85, -43.96],
+            "Jaíba": [-15.34, -43.67],
+            "Juvenília": [-14.21, -44.17],
+            "Mamonas": [-15.07, -42.92],
+            "Manga": [-14.75, -43.93],
+            "Mathias Cardoso": [-14.84, -43.92],
+            "Mato Verde": [-15.39, -42.86],
+            "Miravânia": [-14.67, -44.16],
+            "Montalvânia": [-14.42, -44.36],
+            "Monte Azul": [-15.15, -42.87],
+            "Montezuma": [-15.16, -42.49],
+            "Nova Porteirinha": [-15.80, -43.30],
+            "Pai Pedro": [-15.19, -43.02],
+            "Porteirinha": [-15.73, -43.02],
+            "Santo Antônio do Retiro": [-15.29, -42.49],
+            "Verdelândia": [-15.35, -43.61],
+            "Salinas": [-16.17, -42.29],
+            "Águas Vermelhas": [-15.74, -41.46],
+            "Berizal": [-15.72, -41.72],
+            "Botumirim": [-16.88, -43.03],
+            "Cristália": [-16.73, -42.86],
+            "Curral de Dentro": [-15.60, -42.24],
+            "Divisa Alegre": [-15.29, -41.50],
+            "Francisco Sá": [-16.47, -43.48],
+            "Fruta de Leite": [-16.12, -42.53],
+            "Grão Mogol": [-16.56, -42.89],
+            "Indaiabira": [-15.83, -41.92],
+            "Itacambira": [-17.06, -43.31],
+            "Josenópolis": [-16.54, -42.75],
+            "Ninheira": [-15.37, -41.93],
+            "Novorizonte": [-16.03, -42.39],
+            "Padre Carvalho": [-16.47, -42.52],
+            "Riacho dos Machados": [-16.02, -42.97],
+            "Rio Pardo de Minas": [-15.61, -42.53],
+            "Rubelita": [-16.40, -42.07],
+            "Santa Cruz de Salinas": [-15.97, -42.10],
+            "São João do Paraíso": [-15.30, -42.01],
+            "Serranópolis de Minas": [-16.02, -42.08],
+            "Taiobeiras": [-15.80, -42.22],
+            "Vargem Grande do Rio Pardo": [-15.73, -42.37],
+            "Turmalina": [-17.28, -42.73],
+            "Veredinha": [-16.03, -42.69]
         };
 
         var APP = {
@@ -1233,7 +1311,15 @@
                 const agg = {};
                 filtered.forEach(d => {
                     const client = APP.data.clients.find(c => c.name === d.client);
-                    const cityKey = client && client.obs ? Object.keys(MG_CITIES_COORDS).find(k => c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase() === client.obs.split('-')[0].trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase()) : null;
+                    // Busca a cidade pelo campo city do deal, ou pelo campo obs do cliente como fallback
+                    let cityKey = null;
+                    if (d.city) {
+                        cityKey = Object.keys(MG_CITIES_COORDS).find(k => k.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase() === d.city.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase());
+                    }
+                    if (!cityKey && client && client.obs) {
+                        const obsCity = client.obs.split('-')[0].trim();
+                        cityKey = Object.keys(MG_CITIES_COORDS).find(k => k.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase() === obsCity.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase());
+                    }
                     if(cityKey) {
                         const key = cityKey + '_' + d.owner;
                         if(!agg[key]) agg[key] = {city: cityKey, seller: d.owner, lat: MG_CITIES_COORDS[cityKey][0], lng: MG_CITIES_COORDS[cityKey][1], val: 0, count: 0};
