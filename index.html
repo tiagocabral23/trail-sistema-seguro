@@ -169,6 +169,7 @@
         <div class="sidebar-footer">
             <div id="user-info" style="color:#fbbf24;font-weight:800;margin-bottom:5px"></div>
             <button onclick="APP.logout()" style="background:0 0;border:1px solid #374151;color:#9ca3af;padding:4px;width:100%;cursor:pointer;font-weight:bold;">SAIR DO SISTEMA</button>
+            <button id="btn-migrate-cities" onclick="APP.migrateCities()" style="display:none;margin-top:8px;background:#7c3aed;border:none;color:#fff;padding:6px;width:100%;cursor:pointer;font-weight:bold;border-radius:4px;font-size:10px;">🗺️ MIGRAR CIDADES (1x)</button>
             <div style="margin-top:15px; font-size:9px; opacity:0.5; color: #fbbf24;">v4.5.4 (Seguro)</div>
         </div>
     </aside>
@@ -654,6 +655,8 @@
                     document.querySelectorAll('.nav-item').forEach(b => b.style.display = 'flex');
                     document.querySelectorAll('.gestor-ctrl').forEach(el => el.style.display = isG ? 'flex' : 'none');
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = APP.user.role === 'gestor' ? 'flex' : 'none');
+                    const btnMigrate = document.getElementById('btn-migrate-cities');
+                    if (btnMigrate) btnMigrate.style.display = APP.user.role === 'gestor' ? 'block' : 'none';
                 }
             },
 
@@ -1557,6 +1560,38 @@
             maskMoney: (i) => { let v=i.value.replace(/\D/g,''); v=(v/100).toFixed(2).replace(".",",").replace(/(\d)(?=(\d{3})+(?!\d))/g,"$1."); i.value=v; },
             inputPhone: (i) => { let v=i.value.replace(/\D/g,""); v=v.replace(/^(\d{2})(\d)/,"($1) $2"); v=v.replace(/(\d)(\d{4})$/,"$1-$2"); i.value=v; },
             openWhatsapp: (phone) => { if(!phone) return alert('Sem telefone'); window.open(`https://wa.me/55${phone.replace(/\D/g, '')}`, '_blank'); },
+            migrateCities: async () => {
+                if (APP.user.role !== 'gestor') return;
+                if (!confirm('Isso vai preencher o campo CIDADE de todos os negócios que ainda não têm cidade, usando a cidade do cliente. Continuar?')) return;
+
+                const btn = document.getElementById('btn-migrate-cities');
+                btn.innerText = '⏳ Migrando...';
+                btn.disabled = true;
+
+                const dealsWithoutCity = APP.data.deals.filter(d => !d.city);
+                let updated = 0, skipped = 0;
+
+                for (const deal of dealsWithoutCity) {
+                    const client = APP.data.clients.find(c => c.name === deal.client);
+                    const city = client && client.obs ? client.obs.split('-')[0].trim() : null;
+                    if (city) {
+                        const { error } = await dbClient.from('deals').update({ city }).eq('id', deal.id);
+                        if (!error) updated++;
+                    } else {
+                        skipped++;
+                    }
+                }
+
+                await APP.reloadTable('deals');
+                btn.innerText = '✅ Migração concluída!';
+                btn.style.background = '#059669';
+                setTimeout(() => {
+                    btn.style.display = 'none';
+                }, 4000);
+
+                APP.toast(`✅ ${updated} negócios migrados! ${skipped > 0 ? skipped + ' sem cidade no cliente.' : ''}`);
+            },
+
             exportData: () => { const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.stock),"Estoque"); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.deals),"Negócios"); XLSX.writeFile(wb,"Backup.xlsx"); }
         };
 
