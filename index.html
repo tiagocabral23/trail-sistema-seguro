@@ -507,9 +507,7 @@
                 dbClient.auth.onAuthStateChange((event, session) => {
                     if (event === 'SIGNED_OUT') {
                         APP.user = null;
-                        APP.data = { stock: [], users: [], deals: [], clients: [] };
                         document.getElementById('user-overlay').style.display = 'flex';
-                        document.getElementById('user-info').innerText = '';
                     }
                 });
             },
@@ -1131,12 +1129,24 @@
             editUser: (id) => { const u = APP.data.users.find(x=>x.id===id); if(u) { document.getElementById('usr-id').value=u.id; document.getElementById('usr-name').value=u.name; document.getElementById('usr-auth').value=u.auth_id||''; document.getElementById('usr-role').value=u.role; document.getElementById('usr-goal').value=u.goal?u.goal.toLocaleString('pt-BR',{minimumFractionDigits:2}):''; APP.modal('modal-user'); } },
             saveUser: async (e) => {
                 e.preventDefault(); if(APP.user.role!=='gestor') return alert('Sem permissão');
-                const u = { name: document.getElementById('usr-name').value, auth_id: document.getElementById('usr-auth').value, role: document.getElementById('usr-role').value, goal: APP.parseMoney(document.getElementById('usr-goal').value) };
+                const auth_id = document.getElementById('usr-auth').value.trim();
+                const u = { name: document.getElementById('usr-name').value, auth_id: auth_id, role: document.getElementById('usr-role').value, goal: APP.parseMoney(document.getElementById('usr-goal').value) };
                 const id = document.getElementById('usr-id').value;
                 if(id) {
-                    const { error } = await dbClient.from('users').update(u).eq('id',id);
+                    // Atualiza pelo ID do registro
+                    const { error } = await dbClient.from('users').update(u).eq('id', id);
                     if (error) return alert("Erro ao atualizar utilizador: " + error.message);
                 } else {
+                    // Antes de inserir, verifica se já existe um registro com o mesmo auth_id para evitar duplicatas
+                    if (auth_id) {
+                        const { data: existing } = await dbClient.from('users').select('id').eq('auth_id', auth_id);
+                        if (existing && existing.length > 0) {
+                            const { error } = await dbClient.from('users').update(u).eq('id', existing[0].id);
+                            if (error) return alert("Erro ao atualizar utilizador existente: " + error.message);
+                            APP.closeModals(); APP.toast("Perfil atualizado!"); await APP.reloadTable('users');
+                            return;
+                        }
+                    }
                     const { error } = await dbClient.from('users').insert(u);
                     if (error) return alert("Erro ao cadastrar utilizador: " + error.message);
                 }
@@ -1402,8 +1412,8 @@
                 return hist;
             },
             logout: async () => { 
-                await dbClient.auth.signOut();
-                setTimeout(() => window.location.reload(), 300);
+                await dbClient.auth.signOut(); 
+                window.location.reload(); 
             },
             modal: (id) => document.getElementById(id).classList.add('active'),
             closeModals: () => { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); document.querySelectorAll('form').forEach(f => f.reset()); },
