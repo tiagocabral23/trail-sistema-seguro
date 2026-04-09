@@ -900,7 +900,8 @@
                     deal_type: document.getElementById('deal-type').value, 
                     next_date: document.getElementById('deal-next-date').value || null,
                     next_desc: document.getElementById('deal-next-desc').value,
-                    owner: selectedOwner || APP.user.name 
+                    owner: selectedOwner || APP.user.name,
+                    city: document.getElementById('deal-city').value || null
                 };
 
                 const cityInput = document.getElementById('deal-city').value;
@@ -1303,6 +1304,16 @@
 
             // --- MAPAS, CATALOGO, AGENDA, GRAFICOS ---
             _cityCoordCache: JSON.parse(localStorage.getItem('trail_city_cache') || '{}'),
+            _sellerColors: ['#e63946','#2a9d8f','#e9c46a','#f4a261','#264653','#8ecae6','#a8dadc','#457b9d','#6a4c93','#f77f00','#06d6a0','#ef476f','#118ab2','#ffd166','#073b4c'],
+
+            getSellerColor: (sellerName) => {
+                if (!APP._sellerColorMap) APP._sellerColorMap = {};
+                if (!APP._sellerColorMap[sellerName]) {
+                    const usedCount = Object.keys(APP._sellerColorMap).length;
+                    APP._sellerColorMap[sellerName] = APP._sellerColors[usedCount % APP._sellerColors.length];
+                }
+                return APP._sellerColorMap[sellerName];
+            },
 
             geocodeCity: async (cityName) => {
                 if (MG_CITIES_COORDS[cityName]) return MG_CITIES_COORDS[cityName];
@@ -1364,11 +1375,11 @@
 
                 const legendEl = document.getElementById('map-legend'); if(legendEl) legendEl.innerHTML = '<strong>Vendedores</strong>';
                 const sellers = new Set();
+                APP._sellerColorMap = {}; // reset a cada render para consistência
                 Object.values(agg).forEach(item => {
                     sellers.add(item.seller);
-                    let hash=0; for(let i=0;i<item.seller.length;i++) hash=item.seller.charCodeAt(i)+((hash<<5)-hash);
-                    let color='#'; for(let i=0;i<3;i++) color+=('00'+((hash>>(i*8))&0xFF).toString(16)).substr(-2);
-                    const marker = L.circleMarker([item.lat, item.lng], { color: color, fillColor: color, fillOpacity: 0.6, radius: Math.max(Math.sqrt(item.val)/60, 5) }).addTo(APP.map);
+                    const color = APP.getSellerColor(item.seller);
+                    const marker = L.circleMarker([item.lat, item.lng], { color: color, fillColor: color, fillOpacity: 0.7, radius: Math.max(Math.sqrt(item.val)/60, 7) }).addTo(APP.map);
                     marker.bindTooltip(`<div style="text-align:center;"><strong>${item.city}</strong><br><span style="font-size:11px">Vend: ${item.seller}</span><br><span style="font-size:12px; font-weight:bold;">${item.val.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span><br><small>${item.count} ops</small></div>`);
                     marker.on('click', () => {
                         const tb = document.querySelector('#table-map-details tbody');
@@ -1378,9 +1389,8 @@
                     });
                 });
                 sellers.forEach(s => {
-                    let hash=0; for(let i=0;i<s.length;i++) hash=s.charCodeAt(i)+((hash<<5)-hash);
-                    let color='#'; for(let i=0;i<3;i++) color+=('00'+((hash>>(i*8))&0xFF).toString(16)).substr(-2);
-                    if(legendEl) legendEl.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${color}"></div><span>${s}</span></div>`;
+                    const color = APP.getSellerColor(s);
+                    if(legendEl) legendEl.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${color}; width:12px; height:12px; border-radius:50%;"></div><span>${s}</span></div>`;
                 });
             },
             switchMapView: (view) => { APP.mapView = view; document.getElementById('btn-view-won').classList.toggle('active', view === 'won'); document.getElementById('btn-view-pipeline').classList.toggle('active', view === 'pipeline'); document.getElementById('map-header-title').innerText = view === 'won' ? '🗺️ Mapa de Vendas (MG)' : '🗺️ Mapa de Cobertura (Funil)'; APP.renderMap(); },
