@@ -124,6 +124,7 @@
         .gestor-only { display: none !important; }
         .show-gestor { display: inline-flex !important; }
         
+        .card-action { margin-top: 8px; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f3f4f6; }
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fbbf24; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: .3s; z-index: 3000; font-weight: 700; font-size: 12px; }
 
         @media (max-width: 900px) { .grid-2-col { grid-template-columns: 1fr; } }
@@ -828,6 +829,7 @@
                 APP.renderCatalog();
                 APP.renderGoals();
                 APP.renderDiretoria();
+                setTimeout(APP.renderCharts, 200);
             },
 
             renderKanban: () => {
@@ -1808,6 +1810,11 @@
                 hist.push({ date: new Date().toISOString(), user: APP.user ? APP.user.name : 'Sistema', action: action, detail: detail });
                 return hist;
             },
+            toggleMenu: () => {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('open');
+            },
+
             logout: async () => { 
                 await dbClient.auth.signOut();
                 setTimeout(() => window.location.reload(), 300);
