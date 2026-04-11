@@ -538,6 +538,20 @@
 
     <div id="toast">Sucesso!</div>
 
+    <div id="modal-perda" class="modal">
+        <div class="modal-box" style="max-width:380px;">
+            <h3 style="margin-bottom:15px;">⛔ Motivo da Perda</h3>
+            <div class="form-item">
+                <label>Descreva o motivo</label>
+                <textarea id="perda-motivo" rows="3" placeholder="Ex: Preço alto, comprou de concorrente..." style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+                <button id="btn-confirmar-perda" class="btn btn-danger" style="flex:1;">⛔ Confirmar Perda</button>
+                <button id="btn-cancelar-perda" type="button" class="btn" style="flex:1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         var SUPABASE_URL = 'https://igvdhpzzjamoyetxickb.supabase.co';
         var SUPABASE_KEY = 'sb_publishable_mXmrR5peC1mICxxMxjDKrg_2NJUZG0Q';
@@ -960,10 +974,15 @@
                 const stockId = document.getElementById('deal-stock').value || null; 
                 const selectedOwner = document.getElementById('deal-owner').value;
 
+                const dealValue = APP.parseMoney(document.getElementById('deal-value').value);
+                if (!dealValue || dealValue <= 0) {
+                    if (!confirm('⚠️ O valor está em R$ 0,00. Deseja salvar assim mesmo?')) return;
+                }
+
                 const dealData = {
                     client: document.getElementById('deal-client').value,
                     source: document.getElementById('deal-source').value,
-                    value: APP.parseMoney(document.getElementById('deal-value').value),
+                    value: dealValue,
                     stock_id: stockId,
                     deal_type: document.getElementById('deal-type').value, 
                     next_date: document.getElementById('deal-next-date').value || null,
@@ -1096,27 +1115,51 @@
                 const deal = APP.data.deals.find(d => d.id === id);
                 if (!deal) return;
                 const oldStage = deal.stage;
-                let motivoPerda = '';
                 let updates = { stage: stage };
-                
+
                 if (stage === 'perdido') {
-                    motivoPerda = prompt("Motivo da perda?");
-                    if (motivoPerda === null) { APP.renderKanban(); return; }
-                    updates.next_desc = `⛔ PERDA: ${motivoPerda || 'Não informado'}`;
-                    updates.next_date = new Date().toISOString().split('T')[0];
+                    // Abre modal elegante em vez de prompt()
+                    document.getElementById('perda-motivo').value = '';
+                    APP.modal('modal-perda');
+
+                    await new Promise((resolve) => {
+                        document.getElementById('btn-confirmar-perda').onclick = () => {
+                            const motivo = document.getElementById('perda-motivo').value.trim();
+                            updates.next_desc = `⛔ PERDA: ${motivo || 'Não informado'}`;
+                            updates.next_date = new Date().toISOString().split('T')[0];
+                            updates.history = APP.addLog(deal, 'Movimentação', `De ${oldStage.toUpperCase()} para PERDIDO` + (motivo ? ` (${motivo})` : ''));
+                            APP.closeModals();
+                            resolve(true);
+                        };
+                        document.getElementById('btn-cancelar-perda').onclick = () => {
+                            APP.closeModals();
+                            APP.renderKanban();
+                            resolve(false);
+                        };
+                    }).then(async (confirmed) => {
+                        if (!confirmed) return;
+                        const { error } = await dbClient.from('deals').update(updates).eq('id', id);
+                        if (error) return alert("Erro ao mover cartão: " + error.message);
+                        if (deal.stock_id) {
+                            const s = APP.data.stock.find(x => x.id === deal.stock_id);
+                            if (s) {
+                                const sUpdates = { status: 'Disponível', history: APP.addLog(s, 'Perda', `Negócio: ${deal.client}`) };
+                                await dbClient.from('stock').update(sUpdates).eq('id', s.id);
+                            }
+                        }
+                        await APP.reloadTable('deals');
+                    });
+                    return;
                 }
-                
+
                 if (stage === 'ganho' && oldStage !== 'ganho') {
-                    // Preserva a data original se já existir — evita que re-mover o card altere o mês
-                    if (!deal.close_date) {
-                        updates.close_date = new Date().toISOString();
-                    }
+                    if (!deal.close_date) updates.close_date = new Date().toISOString();
                     const s = APP.data.stock.find(x => x.id === deal.stock_id);
                     updates.original_cost = s ? s.cost : 0;
                 }
-                
-                updates.history = APP.addLog(deal, 'Movimentação', `De ${oldStage.toUpperCase()} para ${stage.toUpperCase()}` + (motivoPerda ? ` (${motivoPerda})` : ''));
-                
+
+                updates.history = APP.addLog(deal, 'Movimentação', `De ${oldStage.toUpperCase()} para ${stage.toUpperCase()}`);
+
                 const { error } = await dbClient.from('deals').update(updates).eq('id', id);
                 if (error) return alert("Erro ao mover cartão: " + error.message);
 
@@ -1124,12 +1167,11 @@
                     const s = APP.data.stock.find(x => x.id === deal.stock_id);
                     if (s) {
                         let sUpdates = {}; let sAction = '';
-                        if (stage === 'ganho') { sUpdates.status = 'Vendido'; sAction = 'Venda'; } 
-                        else if (stage === 'perdido') { sUpdates.status = 'Disponível'; sAction = 'Perda'; } 
+                        if (stage === 'ganho') { sUpdates.status = 'Vendido'; sAction = 'Venda'; }
                         else if (stage === 'af' && s.status !== 'Reservado') { sUpdates.status = 'Reservado'; sAction = 'Reserva'; }
                         else if (['analise_credito', 'documentacao', 'contrato'].includes(stage) && s.status !== 'Em Disputa' && s.status !== 'Vendido') { sUpdates.status = 'Em Disputa'; sAction = 'Disputa'; }
                         else if (stage === 'prospeccao' && s.status !== 'Disponível' && s.status !== 'Vendido') { sUpdates.status = 'Disponível'; sAction = 'Retorno'; }
-                        
+
                         if(sAction) {
                             sUpdates.history = APP.addLog(s, sAction, `Negócio: ${deal.client}`);
                             await dbClient.from('stock').update(sUpdates).eq('id', s.id);
