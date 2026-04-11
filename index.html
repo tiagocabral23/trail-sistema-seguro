@@ -1451,7 +1451,7 @@
                 }
             },
             prepareUser: () => { document.getElementById('usr-id').value=''; document.getElementById('usr-name').value=''; document.getElementById('usr-auth').value=''; document.getElementById('usr-role').value='vendedor'; document.getElementById('usr-goal').value=''; APP.modal('modal-user'); },
-            editUser: (id) => { const u = APP.data.users.find(x=>x.id===id); if(u) { document.getElementById('usr-id').value=u.id; document.getElementById('usr-name').value=u.name; document.getElementById('usr-auth').value=u.auth_id||''; document.getElementById('usr-role').value=u.role; document.getElementById('usr-goal').value=u.goal?u.goal.toLocaleString('pt-BR',{minimumFractionDigits:2}):''; APP.modal('modal-user'); } },
+            editUser: (id) => { const u = APP.data.users.find(x=>x.id==id); if(u) { document.getElementById('usr-id').value=u.id; document.getElementById('usr-name').value=u.name; document.getElementById('usr-auth').value=u.auth_id||''; document.getElementById('usr-role').value=u.role; document.getElementById('usr-goal').value=u.goal?u.goal.toLocaleString('pt-BR',{minimumFractionDigits:2}):''; APP.modal('modal-user'); } },
             saveUser: async (e) => {
                 e.preventDefault(); if(APP.user.role!=='gestor') return alert('Sem permissão');
                 const auth_id = document.getElementById('usr-auth').value.trim();
@@ -1478,7 +1478,7 @@
             deleteUser: async (id) => {
                 if(APP.user.role!=='gestor') return;
                 if(confirm('Tem a certeza que quer apagar este utilizador? O login do utilizador deixará de funcionar imediatamente.')) {
-                    const { error } = await dbClient.from('users').delete().eq('id', id);
+                    const { error } = await dbClient.from('users').delete().eq('id', parseInt(id));
                     if (error) return alert("Erro ao apagar utilizador: " + error.message);
                     APP.toast('Utilizador Excluído!');
                     await APP.reloadTable('users');
