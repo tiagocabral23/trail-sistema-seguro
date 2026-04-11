@@ -110,6 +110,9 @@
         .agenda-item.today { border-left: 4px solid #f59e0b; }
         .agenda-item.future { border-left: 4px solid #10b981; }
         .agenda-date { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-right: 15px; }
+        .agenda-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .agenda-client { font-size: 13px; font-weight: 800; color: #111827; }
+        .agenda-desc { font-size: 11px; color: #6b7280; }
 
         .timeline-item { padding: 10px 0 10px 20px; border-left: 2px solid #e5e7eb; position: relative; }
         .timeline-item::before { content: ''; position: absolute; left: -6px; top: 15px; width: 10px; height: 10px; border-radius: 50%; background: #fbbf24; border: 2px solid #fff; }
@@ -1684,7 +1687,7 @@
                 });
                 tbody.innerHTML = html || `<tr><td colspan="${canEdit?6:3}" style="text-align:center;padding:20px;color:#9ca3af">Nenhum item no catálogo.</td></tr>`;
             },
-            saveCatalogPrice: async (id, field, value) => { await dbClient.from('stock').update({ [field]: APP.parseMoney(value) }).eq('id', id); APP.toast("Preço atualizado!"); },
+            saveCatalogPrice: async (id, field, value) => { const { error } = await dbClient.from('stock').update({ [field]: APP.parseMoney(value) }).eq('id', id); if (error) { APP.toast('❌ Erro ao salvar preço!'); console.error(error); } else { APP.toast('✅ Preço atualizado!'); } },
 
             renderAgenda: () => {
                 const container = document.getElementById('agenda-content'); if(!container) return;
