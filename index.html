@@ -1342,10 +1342,24 @@
                 if (!APP._importRows.length) return;
                 const btn = document.getElementById('btn-confirm-import');
                 btn.disabled = true;
-                btn.innerText = '⏳ Importando...';
+                btn.innerText = '⏳ Verificando duplicatas...';
 
+                // Verifica duplicatas pelo chassi (mono) antes de inserir
+                const existingMonos = APP.data.stock.map(s => (s.mono || '').trim().toLowerCase()).filter(Boolean);
+                const duplicatas = APP._importRows.filter(r => r.mono && existingMonos.includes(r.mono.trim().toLowerCase()));
+                const novas = APP._importRows.filter(r => !r.mono || !existingMonos.includes(r.mono.trim().toLowerCase()));
+
+                if (duplicatas.length > 0) {
+                    const nomes = duplicatas.map(r => r.mono || r.model).join(', ');
+                    const continuar = confirm(`⚠️ ${duplicatas.length} item(ns) já existem no estoque pelo chassi e serão ignorados:\n\n${nomes}\n\nDeseja continuar importando os ${novas.length} item(ns) restantes?`);
+                    if (!continuar) { btn.disabled = false; btn.innerText = '✅ Confirmar Importação'; return; }
+                }
+
+                if (!novas.length) { APP.toast('Nenhum item novo para importar.'); btn.disabled = false; btn.innerText = '✅ Confirmar Importação'; return; }
+
+                btn.innerText = '⏳ Importando...';
                 const now = new Date().toISOString();
-                const items = APP._importRows.map(r => ({
+                const items = novas.map(r => ({
                     ...r,
                     status: 'Disponível',
                     date_entry: now,
@@ -1530,7 +1544,8 @@
                 let html = ''; let tot = 0; let count = 0;
 
                 APP.data.deals.forEach(d => {
-                    const dt = new Date(d.close_date || (d.history && d.history[0]?d.history[0].date:0)).getTime();
+                    if (!d.close_date) return; // ignora deals ganhos sem data de fechamento
+                    const dt = new Date(d.close_date).getTime();
                     if (d.stage === 'ganho' && dt >= start && dt < end) {
                         if (source !== 'all' && d.source !== source) return;
                         if (!isG && d.owner !== APP.user.name) return;
@@ -1862,7 +1877,14 @@
                 APP.toast(`✅ ${updated} negócios migrados! ${skipped > 0 ? skipped + ' sem cidade no cliente.' : ''}`);
             },
 
-            exportData: () => { const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.stock),"Estoque"); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(APP.data.deals),"Negócios"); XLSX.writeFile(wb,"Backup.xlsx"); }
+            exportData: () => {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(APP.data.stock),   "Estoque");
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(APP.data.deals),   "Negócios");
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(APP.data.clients), "Clientes");
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(APP.data.users),   "Equipe");
+                XLSX.writeFile(wb, "Backup_Trail_" + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + ".xlsx");
+            }
         };
 
         document.addEventListener('DOMContentLoaded', APP.init);
