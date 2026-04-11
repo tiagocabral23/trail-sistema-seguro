@@ -538,6 +538,18 @@
 
     <div id="toast">Sucesso!</div>
 
+    <div id="modal-confirm" class="modal">
+        <div class="modal-box" style="max-width:360px; text-align:center;">
+            <div id="confirm-icon" style="font-size:36px; margin-bottom:10px;">⚠️</div>
+            <h3 id="confirm-title" style="margin-bottom:8px;">Confirmar</h3>
+            <p id="confirm-msg" style="font-size:13px; color:#6b7280; margin-bottom:20px;"></p>
+            <div style="display:flex; gap:8px;">
+                <button id="btn-confirm-ok" class="btn btn-danger" style="flex:1;">Confirmar</button>
+                <button id="btn-confirm-cancel" type="button" class="btn btn-dark" style="flex:1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-perda" class="modal">
         <div class="modal-box" style="max-width:380px;">
             <h3 style="margin-bottom:15px;">⛔ Motivo da Perda</h3>
@@ -976,7 +988,7 @@
 
                 const dealValue = APP.parseMoney(document.getElementById('deal-value').value);
                 if (!dealValue || dealValue <= 0) {
-                    if (!confirm('⚠️ O valor está em R$ 0,00. Deseja salvar assim mesmo?')) return;
+                    if (!await APP.confirm('O valor está em R$ 0,00. Deseja salvar assim mesmo?', 'Valor Zerado', '⚠️', 'Salvar assim', false)) return;
                 }
 
                 const dealData = {
@@ -1094,7 +1106,7 @@
 
             deleteDeal: async (id) => {
                 if (APP.user.role !== 'gestor') return alert('Acesso negado.');
-                if(confirm('Excluir permanentemente?')) {
+                if(await APP.confirm('Esta ação não pode ser desfeita.', 'Excluir Oportunidade?', '🗑️', 'Excluir')) {
                     const deal = APP.data.deals.find(d => d.id === id);
                     const { error } = await dbClient.from('deals').delete().eq('id', id);
                     if (error) return alert("Erro ao apagar: " + error.message);
@@ -1256,7 +1268,7 @@
             editStock: (id) => { const s=APP.data.stock.find(x=>x.id===id); document.getElementById('stk-id').value=s.id; document.getElementById('stk-model').value=s.model; document.getElementById('stk-mono').value=s.mono||''; document.getElementById('stk-type').value=s.type; document.getElementById('stk-cost').value=s.cost.toLocaleString('pt-BR',{minimumFractionDigits:2}); APP.modal('modal-stock'); },
             deleteStock: async (id) => { 
                 if(APP.user.role!=='gestor')return; 
-                if(confirm('Excluir máquina do sistema?')) { 
+                if(await APP.confirm('A máquina será removida do estoque permanentemente.', 'Excluir do Estoque?', '🚜', 'Excluir')) { 
                     const { error } = await dbClient.from('stock').delete().eq('id',id); 
                     if (error) return alert("Erro ao apagar estoque: " + error.message);
                     APP.toast('Excluído!'); 
@@ -1264,7 +1276,7 @@
                 } 
             },
             restoreStock: async (id) => {
-                if(confirm('Restaurar para Disponível?')) {
+                if(await APP.confirm('O item voltará para o status Disponível.', 'Restaurar Item?', '♻️', 'Restaurar', false)) {
                     const item = APP.data.stock.find(s => s.id === id);
                     const deal = APP.data.deals.find(d => d.stock_id === id && d.stage === 'ganho');
                     if(deal) await dbClient.from('deals').update({stock_id: null}).eq('id', deal.id);
@@ -1393,7 +1405,7 @@
 
                 if (duplicatas.length > 0) {
                     const nomes = duplicatas.map(r => r.mono || r.model).join(', ');
-                    const continuar = confirm(`⚠️ ${duplicatas.length} item(ns) já existem no estoque pelo chassi e serão ignorados:\n\n${nomes}\n\nDeseja continuar importando os ${novas.length} item(ns) restantes?`);
+                    const continuar = await APP.confirm(`${duplicatas.length} item(ns) já existem no estoque e serão ignorados. Continuar importando os ${novas.length} item(ns) restantes?`, 'Duplicatas encontradas', '⚠️', 'Continuar', false);
                     if (!continuar) { btn.disabled = false; btn.innerText = '✅ Confirmar Importação'; return; }
                 }
 
@@ -1472,7 +1484,7 @@
                 await APP.reloadTable('clients');
             },
             deleteClient: async (id) => { 
-                if(confirm('Excluir cliente permanentemente?')) { 
+                if(await APP.confirm('O cliente será removido permanentemente.', 'Excluir Cliente?', '📇', 'Excluir')) { 
                     const { error } = await dbClient.from('clients').delete().eq('id',id); 
                     if (error) return alert("Erro: " + error.message);
                     await APP.reloadTable('clients'); 
@@ -1538,7 +1550,7 @@
             },
             deleteUser: async (id) => {
                 if(APP.user.role!=='gestor') return;
-                if(confirm('Tem a certeza que quer apagar este utilizador? O login do utilizador deixará de funcionar imediatamente.')) {
+                if(await APP.confirm('O login deste utilizador deixará de funcionar imediatamente.', 'Excluir Membro?', '👤', 'Excluir')) {
                     const { error } = await dbClient.from('users').delete().eq('id', parseInt(id));
                     if (error) return alert("Erro ao apagar utilizador: " + error.message);
                     APP.toast('Utilizador Excluído!');
@@ -1875,6 +1887,21 @@
                 sidebar.classList.toggle('open');
             },
 
+            confirm: (msg, title = 'Confirmar', icon = '⚠️', btnLabel = 'Confirmar', danger = true) => {
+                return new Promise((resolve) => {
+                    document.getElementById('confirm-icon').innerText = icon;
+                    document.getElementById('confirm-title').innerText = title;
+                    document.getElementById('confirm-msg').innerText = msg;
+                    const btnOk = document.getElementById('btn-confirm-ok');
+                    btnOk.innerText = btnLabel;
+                    btnOk.className = danger ? 'btn btn-danger' : 'btn btn-main';
+                    btnOk.style.flex = '1';
+                    APP.modal('modal-confirm');
+                    btnOk.onclick = () => { APP.closeModals(); resolve(true); };
+                    document.getElementById('btn-confirm-cancel').onclick = () => { APP.closeModals(); resolve(false); };
+                });
+            },
+
             logout: async () => { 
                 await dbClient.auth.signOut();
                 setTimeout(() => window.location.reload(), 300);
@@ -1889,7 +1916,7 @@
             openWhatsapp: (phone) => { if(!phone) return alert('Sem telefone'); window.open(`https://wa.me/55${phone.replace(/\D/g, '')}`, '_blank'); },
             migrateCities: async () => {
                 if (APP.user.role !== 'gestor') return;
-                if (!confirm('Isso vai preencher o campo CIDADE de todos os negócios que ainda não têm cidade, usando a cidade do cliente. Continuar?')) return;
+                if (!await APP.confirm('Isso vai preencher o campo CIDADE de todos os negócios que ainda não têm cidade, usando a cidade do cliente.', 'Migrar Cidades?', '🗺️', 'Continuar', false)) return;
 
                 const btn = document.getElementById('btn-migrate-cities');
                 btn.innerText = '⏳ Migrando...';
