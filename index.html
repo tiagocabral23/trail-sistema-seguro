@@ -1045,8 +1045,10 @@
                 APP.prepareDeal(d.stock_id); 
                 document.getElementById('deal-id').value = d.id; 
                 document.getElementById('deal-client').value = d.client; 
+                // Carrega cidade: prioriza d.city (campo novo), fallback para client.obs (campo antigo)
                 const client = APP.data.clients.find(c => c.name === d.client);
-                if (client && client.obs) document.getElementById('deal-city').value = client.obs;
+                const cityValue = d.city || (client && client.obs ? client.obs : '');
+                document.getElementById('deal-city').value = cityValue;
                 document.getElementById('deal-source').value = d.source || 'Loja/Passante';
                 document.getElementById('deal-value').value = d.value.toLocaleString('pt-BR', {minimumFractionDigits:2}); 
                 document.getElementById('deal-type').value = d.deal_type || (d.stock_id ? 'maquina' : 'consorcio'); 
