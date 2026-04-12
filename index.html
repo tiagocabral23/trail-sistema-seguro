@@ -287,8 +287,14 @@
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="search-catalog" onkeyup="APP.renderCatalog()" placeholder="Buscar item no catálogo..." style="padding: 10px; flex: 1; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
+                <div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;">
+                    <button class="stock-tab-btn active" onclick="APP.switchCatalogTab('Todos')" id="ctab-Todos">📋 Todos <span id="ctab-count-Todos" class="stock-tab-count"></span></button>
+                    <button class="stock-tab-btn" onclick="APP.switchCatalogTab('Trator')" id="ctab-Trator">🚜 Tratores <span id="ctab-count-Trator" class="stock-tab-count"></span></button>
+                    <button class="stock-tab-btn" onclick="APP.switchCatalogTab('Implemento')" id="ctab-Implemento">⚙️ Implementos <span id="ctab-count-Implemento" class="stock-tab-count"></span></button>
+                    <button class="stock-tab-btn" onclick="APP.switchCatalogTab('Outros')" id="ctab-Outros">📦 Outros <span id="ctab-count-Outros" class="stock-tab-count"></span></button>
+                </div>
                 <div class="data-card">
-                    <div class="data-card-header">Catálogo & Preços</div>
+                    <div class="data-card-header" id="catalog-tab-header">Catálogo & Preços — Todos</div>
                     <div class="table-responsive"><table id="table-catalog"><thead></thead><tbody></tbody></table></div>
                 </div>
             </section>
@@ -1785,13 +1791,38 @@
             },
             switchMapView: (view) => { APP.mapView = view; document.getElementById('btn-view-won').classList.toggle('active', view === 'won'); document.getElementById('btn-view-pipeline').classList.toggle('active', view === 'pipeline'); document.getElementById('map-header-title').innerText = view === 'won' ? '🗺️ Mapa de Vendas (MG)' : '🗺️ Mapa de Cobertura (Funil)'; APP.renderMap(); },
 
+            switchCatalogTab: (type) => {
+                APP.catalogTab = type;
+                document.querySelectorAll('[id^="ctab-"]').forEach(b => {
+                    if(!b.id.includes('count')) b.classList.remove('active');
+                });
+                const btn = document.getElementById('ctab-' + type);
+                if(btn) btn.classList.add('active');
+                const labels = { 'Todos': 'Todos', 'Trator': 'Tratores', 'Implemento': 'Implementos', 'Outros': 'Outros' };
+                const header = document.getElementById('catalog-tab-header');
+                if(header) header.innerText = 'Catálogo & Preços — ' + (labels[type] || type);
+                APP.renderCatalog();
+            },
+
             renderCatalog: () => {
                 const tbody = document.querySelector('#table-catalog tbody'); const thead = document.querySelector('#table-catalog thead'); if(!tbody||!thead) return;
                 const canEdit = APP.user.role === 'gestor' || APP.user.role === 'assistente';
                 thead.innerHTML = canEdit ? `<tr><th>Modelo</th><th>Status</th><th>Custo</th><th>Venda</th><th>Promo</th><th>Margem</th></tr>` : `<tr><th>Modelo</th><th>Status</th><th>Preço</th></tr>`;
                 
                 const term = (document.getElementById('search-catalog')?document.getElementById('search-catalog').value:'').toLowerCase();
-                let items = APP.data.stock.filter(s => s.status !== 'Vendido'); items.sort((a,b) => a.model.localeCompare(b.model));
+                const activeTab = APP.catalogTab || 'Todos';
+
+                // Atualiza contadores das abas
+                const allAvail = APP.data.stock.filter(s => s.status !== 'Vendido');
+                const ctEl = document.getElementById('ctab-count-Todos');
+                if(ctEl) ctEl.innerText = allAvail.length;
+                ['Trator','Implemento','Outros'].forEach(t => {
+                    const el = document.getElementById('ctab-count-' + t);
+                    if(el) el.innerText = allAvail.filter(s => s.type === t).length;
+                });
+
+                let items = allAvail.filter(s => activeTab === 'Todos' || s.type === activeTab);
+                items.sort((a,b) => a.model.localeCompare(b.model));
                 
                 let html = '';
                 items.forEach(s => {
