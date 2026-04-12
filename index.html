@@ -1204,8 +1204,14 @@
                 const isAssistente = APP.user.role === 'assistente';
 
                 let html = ''; let htmlSold = '';
-                
-                APP.data.stock.forEach(s => {
+
+                const sorted = [...APP.data.stock].sort((a, b) => {
+                    const da = a.date_entry ? new Date(a.date_entry).getTime() : 0;
+                    const db = b.date_entry ? new Date(b.date_entry).getTime() : 0;
+                    return da - db;
+                });
+
+                sorted.forEach(s => {
                     if (s.model.toLowerCase().includes(term) || (s.mono && s.mono.toLowerCase().includes(term))) {
                         const entryDate = s.date_entry ? new Date(s.date_entry).getTime() : Date.now();
                         if (s.status !== 'Vendido') {
