@@ -90,6 +90,12 @@
         .form-item label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; color: #4b5563; }
         .form-item input, .form-item select, .form-item textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: #fff; font-family: inherit; }
 
+
+        .stock-tab-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #e5e7eb; background: #fff; color: #4b5563; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .stock-tab-btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+        .stock-tab-btn.active { background: #1f2937; color: #fbbf24; border-color: #1f2937; }
+        .stock-tab-count { background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 10px; font-size: 10px; }
+        .stock-tab-btn:not(.active) .stock-tab-count { background: #f3f4f6; color: #374151; }
         .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 700; font-size: 11px; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-main { background: #fbbf24; color: #000; }
         .btn-dark { background: #1f2937; color: #fbbf24; }
@@ -321,8 +327,14 @@
                     <button id="btn-import-stock" class="btn btn-dark gestor-ctrl" onclick="APP.prepareImportStock()" style="white-space:nowrap;">📥 Importar Planilha</button>
                     <button id="btn-new-stock" class="btn btn-main gestor-ctrl" onclick="APP.prepareStock()">+ Novo Item</button>
                 </div>
+                <div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;">
+                    <button class="stock-tab-btn active" onclick="APP.switchStockTab('Todos')" id="stab-Todos">🚜 Todos <span id="stab-count-Todos" class="stock-tab-count"></span></button>
+                    <button class="stock-tab-btn" onclick="APP.switchStockTab('Trator')" id="stab-Trator">🚜 Tratores <span id="stab-count-Trator" class="stock-tab-count"></span></button>
+                    <button class="stock-tab-btn" onclick="APP.switchStockTab('Implemento')" id="stab-Implemento">⚙️ Implementos <span id="stab-count-Implemento" class="stock-tab-count"></span></button>
+                    <button class="stock-tab-btn" onclick="APP.switchStockTab('Outros')" id="stab-Outros">📦 Outros <span id="stab-count-Outros" class="stock-tab-count"></span></button>
+                </div>
                 <div class="data-card">
-                    <div class="data-card-header">Disponível no Pátio</div>
+                    <div class="data-card-header" id="stock-tab-header">Disponível no Pátio — Todos</div>
                     <div class="table-responsive">
                         <table id="table-stock"><thead><tr><th>Tipo</th><th>Modelo</th><th>Chassi</th><th>Custo</th><th>Dias</th><th>Giro</th><th>Status</th><th>Ação</th></tr></thead><tbody></tbody></table>
                     </div>
@@ -1194,6 +1206,17 @@
             },
 
             // --- ESTOQUE ---
+            switchStockTab: (type) => {
+                APP.stockTab = type;
+                document.querySelectorAll('.stock-tab-btn').forEach(b => b.classList.remove('active'));
+                const btn = document.getElementById('stab-' + type);
+                if(btn) btn.classList.add('active');
+                const header = document.getElementById('stock-tab-header');
+                const labels = { 'Todos': 'Todos', 'Trator': 'Tratores', 'Implemento': 'Implementos', 'Outros': 'Outros' };
+                if(header) header.innerText = 'Disponível no Pátio — ' + (labels[type] || type);
+                APP.renderStock();
+            },
+
             renderStock: () => {
                 if(!APP.user) return;
                 const tbody = document.querySelector('#table-stock tbody');
@@ -1211,7 +1234,20 @@
                     return da - db;
                 });
 
+                // Atualiza contadores das abas
+                const tipos = ['Trator', 'Implemento', 'Outros'];
+                const avail = sorted.filter(s => s.status !== 'Vendido');
+                const countEl = document.getElementById('stab-count-Todos');
+                if(countEl) countEl.innerText = avail.length;
+                tipos.forEach(t => {
+                    const el = document.getElementById('stab-count-' + t);
+                    if(el) el.innerText = avail.filter(s => s.type === t).length;
+                });
+
+                const activeTab = APP.stockTab || 'Todos';
+
                 sorted.forEach(s => {
+                    if(activeTab !== 'Todos' && s.status !== 'Vendido' && s.type !== activeTab) return;
                     if (s.model.toLowerCase().includes(term) || (s.mono && s.mono.toLowerCase().includes(term))) {
                         const entryDate = s.date_entry ? new Date(s.date_entry).getTime() : Date.now();
                         if (s.status !== 'Vendido') {
