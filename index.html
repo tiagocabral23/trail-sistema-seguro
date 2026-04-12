@@ -1844,12 +1844,11 @@
                     const future = deals.filter(d => d.next_date > today);
                     container.innerHTML = buildSection('⚠️ Atrasadas', delayed) + buildSection('📅 Hoje', todayList) + buildSection('🚀 Próximas', future);
                 } else {
-                    // Gestor: agrupa por vendedor, e dentro por tempo
+                    // Gestor: acordeão por vendedor
                     const sellers = [...new Set(deals.map(d => d.owner))].sort();
                     const totalAtrasadas = deals.filter(d => d.next_date < today).length;
                     const totalHoje = deals.filter(d => d.next_date === today).length;
 
-                    // Sumário geral no topo
                     let html = `<div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
                         <div style="background:#fee2e2; border:1px solid #fecaca; border-radius:8px; padding:10px 16px; flex:1; min-width:120px;">
                             <div style="font-size:10px; font-weight:800; color:#991b1b; text-transform:uppercase;">⚠️ Atrasadas</div>
@@ -1865,20 +1864,23 @@
                         </div>
                     </div>`;
 
-                    sellers.forEach(seller => {
+                    sellers.forEach((seller, idx) => {
                         const sellerDeals = deals.filter(d => d.owner === seller);
                         const delayed = sellerDeals.filter(d => d.next_date < today);
                         const todayList = sellerDeals.filter(d => d.next_date === today);
                         const future = sellerDeals.filter(d => d.next_date > today);
-
                         const hasAlert = delayed.length > 0;
-                        html += `<div style="margin-bottom:24px;">
-                            <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#1f2937; border-radius:8px 8px 0 0; margin-bottom:0;">
+                        const bodyId = `agenda-body-${idx}`;
+
+                        html += `<div style="margin-bottom:10px; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;">
+                            <div onclick="APP.toggleAgendaSeller('${bodyId}')"
+                                style="display:flex; align-items:center; gap:10px; padding:12px 16px; background:#1f2937; cursor:pointer; user-select:none;">
                                 <span style="font-size:13px; font-weight:800; color:#fbbf24; text-transform:uppercase;">👤 ${seller}</span>
-                                ${hasAlert ? `<span style="background:#ef4444; color:#fff; font-size:9px; font-weight:800; padding:2px 7px; border-radius:10px; text-transform:uppercase;">${delayed.length} atrasada${delayed.length>1?'s':''}</span>` : ''}
+                                ${hasAlert ? `<span style="background:#ef4444; color:#fff; font-size:9px; font-weight:800; padding:2px 7px; border-radius:10px;">${delayed.length} atrasada${delayed.length>1?'s':''}</span>` : ''}
                                 <span style="margin-left:auto; font-size:11px; color:#9ca3af;">${sellerDeals.length} tarefa${sellerDeals.length!==1?'s':''}</span>
+                                <span id="${bodyId}-arrow" style="color:#9ca3af; font-size:12px; transition:transform 0.2s;">▼</span>
                             </div>
-                            <div style="border:1px solid #e5e7eb; border-top:none; border-radius:0 0 8px 8px; padding:10px;">
+                            <div id="${bodyId}" style="display:none; padding:12px; background:#fff;">
                                 ${buildSection('⚠️ Atrasadas', delayed)}
                                 ${buildSection('📅 Hoje', todayList)}
                                 ${buildSection('🚀 Próximas', future)}
@@ -1996,6 +1998,15 @@
                 hist.push({ date: new Date().toISOString(), user: APP.user ? APP.user.name : 'Sistema', action: action, detail: detail });
                 return hist;
             },
+            toggleAgendaSeller: (bodyId) => {
+                const body = document.getElementById(bodyId);
+                const arrow = document.getElementById(bodyId + '-arrow');
+                if(!body) return;
+                const isOpen = body.style.display !== 'none';
+                body.style.display = isOpen ? 'none' : 'block';
+                if(arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+            },
+
             toggleMenu: () => {
                 const sidebar = document.getElementById('sidebar');
                 sidebar.classList.toggle('open');
