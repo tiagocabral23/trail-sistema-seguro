@@ -1515,17 +1515,28 @@
                 const term = document.getElementById('search-client').value.toLowerCase();
                 const tbody = document.querySelector('#table-clients tbody');
                 if(!tbody) return;
-                
+                const isG = APP.user.role === 'gestor' || APP.user.role === 'assistente';
+
+                // Vendedor vê apenas clientes vinculados aos seus negócios
                 const uniqueClients = [];
                 APP.data.clients.forEach(c => {
                     if (!uniqueClients.find(x => x.name === c.name)) uniqueClients.push(c);
                 });
 
-                tbody.innerHTML = uniqueClients.filter(c=>c.name.toLowerCase().includes(term)).map(c => {
-                    const totalSpent = APP.data.deals.filter(d => d.client === c.name && d.stage === 'ganho').reduce((a, b) => a + b.value, 0);
+                let clients = uniqueClients;
+                if (!isG) {
+                    const myClientNames = new Set(APP.data.deals.filter(d => d.owner === APP.user.name).map(d => d.client));
+                    clients = clients.filter(c => myClientNames.has(c.name));
+                }
+
+                tbody.innerHTML = clients.filter(c => c.name.toLowerCase().includes(term)).map(c => {
+                    const myDeals = isG 
+                        ? APP.data.deals.filter(d => d.client === c.name && d.stage === 'ganho')
+                        : APP.data.deals.filter(d => d.client === c.name && d.stage === 'ganho' && d.owner === APP.user.name);
+                    const totalSpent = myDeals.reduce((a, b) => a + b.value, 0);
                     const docHtml = c.doc_link ? `<a href="${c.doc_link}" target="_blank" class="btn btn-small btn-dark">📂 Drive</a>` : '-';
                     return `<tr><td><b>${c.name}</b><br><small style="color:#6b7280">${c.cpf_cnpj||''}</small></td><td>${c.phone||'-'} ${c.phone?`<a href="#" onclick="APP.openWhatsapp('${c.phone}')" class="btn-whatsapp">Zap</a>`:''}<br><small>${c.email||''}</small></td><td>${c.obs||'-'}</td><td><span style="color:#059669; font-weight:800;">${totalSpent.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></td><td>${docHtml}</td><td><button onclick="APP.editClient('${c.id}')" class="btn btn-small btn-main">✏️</button> <button onclick="APP.deleteClient('${c.id}')" class="btn btn-small btn-danger">×</button></td></tr>`;
-                }).join('');
+                }).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">Nenhum cliente encontrado.</td></tr>';
             },
             saveClient: async (e) => {
                 e.preventDefault();
