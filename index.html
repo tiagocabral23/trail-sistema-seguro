@@ -1278,13 +1278,24 @@
 
                 const execDash = document.getElementById('stock-exec-dash');
                 if (execDash && (isGestor || isAssistente)) {
-                    const avail = APP.data.stock.filter(s => s.status !== 'Vendido');
-                    const totCap = avail.reduce((a,b)=>a+b.cost,0);
-                    const critCap = avail.filter(s => APP.daysDiff(new Date(s.date_entry).getTime()) > 365).reduce((a,b)=>a+b.cost,0);
+                    // Filtra pelo tipo da aba ativa
+                    const allAvail = APP.data.stock.filter(s => s.status !== 'Vendido');
+                    const scoped = activeTab === 'Todos' ? allAvail : allAvail.filter(s => s.type === activeTab);
+
+                    const totCap = scoped.reduce((a,b) => a + b.cost, 0);
+                    const critCap = scoped.filter(s => APP.daysDiff(new Date(s.date_entry||Date.now()).getTime()) > 365).reduce((a,b) => a + b.cost, 0);
+
+                    // Média de idade (dias) dos itens do escopo
+                    const idades = scoped.map(s => APP.daysDiff(new Date(s.date_entry||Date.now()).getTime()));
+                    const mediaIdade = idades.length > 0 ? Math.round(idades.reduce((a,b) => a+b, 0) / idades.length) : 0;
+
+                    const tabLabel = activeTab === 'Todos' ? 'Pátio' : activeTab + 's';
+
                     execDash.innerHTML = `
-                        <div class="inv-card"><div class="inv-label">💰 Imobilizado</div><div class="inv-value">${totCap.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div></div>
-                        <div class="inv-card"><div class="inv-label">🚜 Total Itens (Pátio)</div><div class="inv-value">${avail.length}</div></div>
-                        <div class="inv-card critical"><div class="inv-label">🚨 Crítico (>365d)</div><div class="inv-value">${critCap.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div></div>
+                        <div class="inv-card"><div class="inv-label">💰 Imobilizado (${tabLabel})</div><div class="inv-value">${totCap.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div></div>
+                        <div class="inv-card"><div class="inv-label">📦 Total no Pátio (${tabLabel})</div><div class="inv-value">${scoped.length} iten${scoped.length !== 1 ? 's' : ''}</div></div>
+                        <div class="inv-card ${mediaIdade > 210 ? 'dispute' : ''}"><div class="inv-label">📅 Média de Idade</div><div class="inv-value">${mediaIdade}d</div></div>
+                        <div class="inv-card critical"><div class="inv-label">🚨 Crítico >365d</div><div class="inv-value">${critCap.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div></div>
                     `;
                 }
             },
