@@ -207,14 +207,24 @@
                     <div id="goals-container" style="padding: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;"></div>
                 </div>
 
-                <div class="grid-2-col" style="margin-bottom:20px;">
-                    <div class="data-card">
-                        <div class="data-card-header">Evolução de Vendas (6 Meses)</div>
-                        <div style="padding:10px;"><div class="chart-container"><canvas id="chart-sales"></canvas></div></div>
+                <div class="data-card" style="margin-bottom:20px;">
+                    <div class="data-card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <span>📈 Evolução de Vendas (6 Meses)</span>
+                        <div id="chart-filter-wrap" style="display:none; align-items:center; gap:6px;">
+                            <span style="font-size:10px; color:#9ca3af; font-weight:600;">VENDEDOR:</span>
+                            <select id="chart-seller-filter" onchange="APP.renderCharts()" style="padding:4px 8px; border-radius:4px; border:1px solid #374151; background:#374151; color:#fbbf24; font-size:11px; font-weight:700; cursor:pointer;">
+                                <option value="all">Toda a Equipe</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="data-card">
-                        <div class="data-card-header">Mix de Produtos</div>
-                        <div style="padding:10px;"><div class="chart-container"><canvas id="chart-mix"></canvas></div></div>
+                    <div style="padding:10px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <div style="flex:2; min-width:280px;"><div class="chart-container" style="height:280px;"><canvas id="chart-sales"></canvas></div></div>
+                        <div style="flex:1; min-width:200px;"><div class="chart-container" style="height:280px;"><canvas id="chart-mix"></canvas></div></div>
+                    </div>
+                    <div style="display:flex; gap:16px; padding:4px 12px 10px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:5px; font-size:11px; color:#374151;"><div style="width:12px; height:3px; background:#fbbf24; border-radius:2px;"></div>Tratores</div>
+                        <div style="display:flex; align-items:center; gap:5px; font-size:11px; color:#374151;"><div style="width:12px; height:3px; background:#3b82f6; border-radius:2px;"></div>Implementos</div>
+                        <div style="display:flex; align-items:center; gap:5px; font-size:11px; color:#374151;"><div style="width:12px; height:3px; background:#10b981; border-radius:2px;"></div>Consórcio</div>
                     </div>
                 </div>
 
@@ -1935,32 +1945,108 @@
             },
 
             renderCharts: () => {
-                const ctxSales = document.getElementById('chart-sales'); const ctxMix = document.getElementById('chart-mix');
+                const ctxSales = document.getElementById('chart-sales');
+                const ctxMix = document.getElementById('chart-mix');
                 if(!ctxSales || !ctxMix) return;
 
-                const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-                const today = new Date(); const labels = []; const dataSales = [];
-                for(let i=5; i>=0; i--) {
-                    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                    labels.push(months[d.getMonth()]);
-                    dataSales.push(APP.data.deals.filter(deal => deal.stage === 'ganho' && deal.close_date && new Date(deal.close_date).getMonth() === d.getMonth() && new Date(deal.close_date).getFullYear() === d.getFullYear()).reduce((a, b) => a + b.value, 0));
+                const isG = APP.user.role === 'gestor' || APP.user.role === 'assistente';
+
+                // Popula e exibe filtro de vendedor para gestor
+                const filterWrap = document.getElementById('chart-filter-wrap');
+                const sellerFilter = document.getElementById('chart-seller-filter');
+                if(isG && filterWrap && sellerFilter) {
+                    filterWrap.style.display = 'flex';
+                    if(sellerFilter.options.length <= 1) {
+                        APP.data.users.filter(u => u.role === 'vendedor').forEach(u => {
+                            const opt = document.createElement('option');
+                            opt.value = u.name; opt.innerText = u.name;
+                            sellerFilter.appendChild(opt);
+                        });
+                    }
                 }
 
-                const mixCounts = { 'Trator': 0, 'Implemento': 0, 'Outros': 0, 'Consórcio': 0 };
-                APP.data.deals.filter(d=>d.stage==='ganho').forEach(d => {
-                    let type = 'Consórcio';
-                    if(d.deal_type !== 'consorcio' && d.stock_id) {
-                        const s = APP.data.stock.find(x => x.id == d.stock_id);
-                        if(s) { if(s.type==='Trator')type='Trator'; else if(s.type==='Implemento')type='Implemento'; else type='Outros'; } else type='Outros';
+                // Escopo: gestor pode filtrar, vendedor vê só o dele
+                const selectedSeller = isG && sellerFilter ? sellerFilter.value : APP.user.name;
+                let scope = APP.data.deals.filter(d => d.stage === 'ganho' && d.close_date);
+                if(selectedSeller !== 'all') scope = scope.filter(d => d.owner === selectedSeller);
+
+                const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+                const today = new Date();
+                const labels = [];
+                const dataTratores = []; const dataImplementos = []; const dataConsorcio = [];
+
+                for(let i = 5; i >= 0; i--) {
+                    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    const m = d.getMonth(); const y = d.getFullYear();
+                    labels.push(months[m]);
+
+                    const monthDeals = scope.filter(deal => {
+                        const dt = new Date(deal.close_date);
+                        return dt.getMonth() === m && dt.getFullYear() === y;
+                    });
+
+                    let trat = 0, impl = 0, cons = 0;
+                    monthDeals.forEach(deal => {
+                        if(deal.deal_type === 'consorcio') { cons += deal.value; return; }
+                        const s = APP.data.stock.find(x => x.id == deal.stock_id);
+                        if(s && s.type === 'Trator') trat += deal.value;
+                        else if(s && s.type === 'Implemento') impl += deal.value;
+                        else trat += deal.value; // sem estoque vinculado, conta como trator
+                    });
+
+                    dataTratores.push(trat);
+                    dataImplementos.push(impl);
+                    dataConsorcio.push(cons);
+                }
+
+                // Gráfico de linhas com 3 séries
+                if(salesChart) salesChart.destroy();
+                salesChart = new Chart(ctxSales, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Tratores',    data: dataTratores,   borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.08)',  tension: 0.4, fill: true,  pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                            { label: 'Implementos', data: dataImplementos, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)',   tension: 0.4, fill: true,  pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 },
+                            { label: 'Consórcio',   data: dataConsorcio,  borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)',   tension: 0.4, fill: true,  pointRadius: 4, pointHoverRadius: 6, borderWidth: 2 }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v, font:{size:10} }, grid: { color:'rgba(0,0,0,0.04)' } },
+                            x: { ticks: { font:{size:11} } }
+                        }
                     }
-                    if(mixCounts[type] !== undefined) mixCounts[type] += d.value;
                 });
 
-                if(salesChart) salesChart.destroy();
-                salesChart = new Chart(ctxSales, { type: 'line', data: { labels: labels, datasets: [{ label: 'Vendas', data: dataSales, borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.2)', tension: 0.4, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} } } });
-                
+                // Donut de mix — mesmo escopo do filtro
+                const mixTot = { 'Tratores': dataTratores.reduce((a,b)=>a+b,0), 'Implementos': dataImplementos.reduce((a,b)=>a+b,0), 'Consórcio': dataConsorcio.reduce((a,b)=>a+b,0) };
                 if(mixChart) mixChart.destroy();
-                mixChart = new Chart(ctxMix, { type: 'doughnut', data: { labels: Object.keys(mixCounts), datasets: [{ data: Object.values(mixCounts), backgroundColor: ['#fbbf24', '#3b82f6', '#9ca3af', '#10b981'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+                mixChart = new Chart(ctxMix, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(mixTot),
+                        datasets: [{ data: Object.values(mixTot), backgroundColor: ['#fbbf24','#3b82f6','#10b981'], borderWidth: 2, borderColor: '#fff' }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font:{size:11}, padding:10 } },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}` } }
+                        },
+                        cutout: '60%'
+                    }
+                });
             },
 
             renderGoals: () => {
