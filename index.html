@@ -1083,8 +1083,9 @@
 
                 let deals = APP.data.deals;
                 if (['gestor','assistente'].includes(APP.user.role)) {
-                    const f = document.getElementById('filter-user').value;
-                    if(f !== 'all') deals = deals.filter(d => d.owner === f);
+                    const filterEl = document.getElementById('filter-user');
+                    const f = filterEl ? filterEl.value : 'all';
+                    if(f && f !== 'all') deals = deals.filter(d => d.owner === f);
                 } else {
                     deals = deals.filter(d => d.owner === APP.user.name);
                 }
