@@ -241,7 +241,14 @@
                         </div>
                     </div>
                     <div class="data-card">
-                        <div class="data-card-header">🏆 Top Vendedores</div>
+                        <div class="data-card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                            <span>🏆 Top Vendedores</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button onclick="APP.rankingNav(-1)" style="background:rgba(255,255,255,0.1); border:none; color:#fbbf24; font-size:14px; cursor:pointer; border-radius:4px; padding:2px 8px; line-height:1;">‹</button>
+                                <span id="ranking-period-label" style="font-size:10px; font-weight:700; color:#fbbf24; min-width:80px; text-align:center;"></span>
+                                <button onclick="APP.rankingNav(1)" style="background:rgba(255,255,255,0.1); border:none; color:#fbbf24; font-size:14px; cursor:pointer; border-radius:4px; padding:2px 8px; line-height:1;">›</button>
+                            </div>
+                        </div>
                         <div id="ranking-list" style="padding: 10px;"></div>
                     </div>
                 </div>
@@ -871,7 +878,7 @@
                 if(tab==='vendas') APP.renderCatalog();
                 if(tab==='equipe') { APP.reloadTable('users').then(() => APP.renderUsers()); }
                 if(tab==='diretoria') APP.renderDiretoria(); 
-                if(tab==='dashboard') { APP.renderGoals(); setTimeout(APP.renderCharts, 200); }
+                if(tab==='dashboard') { APP.renderGoals(); APP.renderRanking(); setTimeout(APP.renderCharts, 200); }
                 if(tab==='mapa') setTimeout(APP.renderMap, 200);
             },
 
@@ -1598,9 +1605,7 @@
                         if (u.role !== 'gestor' && u.role !== 'diretoria_restrita') ranking.push({name: u.name, total: totalSales});
                         return `<tr><td>${u.name}</td><td>${open}</td><td>${wonDeals.length}</td><td><b>${userDeals.length>0?((wonDeals.length/userDeals.length)*100).toFixed(1):'0.0'}%</b></td><td>${userDeals.length}</td></tr>`;
                     }).join('');
-                    ranking.sort((a,b) => b.total - a.total);
-                    const rankEl = document.getElementById('ranking-list');
-                    if (rankEl) rankEl.innerHTML = ranking.map((r, i) => `<div class="ranking-row"><div style="display:flex; align-items:center;"><div class="ranking-pos">${i+1}</div><div class="ranking-name">${r.name}</div></div><div class="ranking-val">${r.total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</div></div>`).join('');
+                    APP.renderRanking();
                 }
             },
             prepareUser: () => { document.getElementById('usr-id').value=''; document.getElementById('usr-name').value=''; document.getElementById('usr-auth').value=''; document.getElementById('usr-role').value='vendedor'; document.getElementById('usr-goal').value=''; APP.modal('modal-user'); },
@@ -1639,6 +1644,80 @@
             },
 
             // --- KPIS & REPORTS ---
+            rankingOffset: 0, // 0 = mês atual, -1 = mês anterior, null = total
+
+            rankingNav: (dir) => {
+                // Ciclo: mês atual (0) → anteriores (-1,-2,...,-11) → total (null) → volta ao atual
+                if (APP.rankingOffset === null) {
+                    APP.rankingOffset = 0; // total → atual
+                } else {
+                    const next = APP.rankingOffset + dir;
+                    if (next < -11) { APP.rankingOffset = null; } // passa do limite → total
+                    else if (next > 0) { APP.rankingOffset = null; } // voltou além do atual → total
+                    else { APP.rankingOffset = next; }
+                }
+                APP.renderRanking();
+            },
+
+            renderRanking: () => {
+                const rankEl = document.getElementById('ranking-list');
+                const labelEl = document.getElementById('ranking-period-label');
+                if(!rankEl) return;
+
+                const DASH_EXCLUDED = ['TIAGO CABRAL', 'MARCELO'];
+                const isExcluded = (name) => DASH_EXCLUDED.some(n => (name||'').toUpperCase().includes(n));
+                const sellers = APP.data.users.filter(u => u.role === 'vendedor' && !isExcluded(u.name));
+                const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+                let wonDeals;
+                if(APP.rankingOffset === null) {
+                    // Total geral
+                    wonDeals = APP.data.deals.filter(d => d.stage === 'ganho' && d.close_date);
+                    if(labelEl) labelEl.innerText = 'Total Geral';
+                } else {
+                    const ref = new Date();
+                    ref.setMonth(ref.getMonth() + APP.rankingOffset);
+                    const m = ref.getMonth(); const y = ref.getFullYear();
+                    wonDeals = APP.data.deals.filter(d => {
+                        if(d.stage !== 'ganho' || !d.close_date) return false;
+                        const dt = new Date(d.close_date);
+                        return dt.getMonth() === m && dt.getFullYear() === y;
+                    });
+                    const label = APP.rankingOffset === 0 ? `${months[m]} (atual)` : `${months[m]}/${String(y).slice(2)}`;
+                    if(labelEl) labelEl.innerText = label;
+                }
+
+                const ranking = sellers.map(u => ({
+                    name: u.name,
+                    total: wonDeals.filter(d => d.owner === u.name).reduce((a,b) => a + b.value, 0),
+                    count: wonDeals.filter(d => d.owner === u.name).length,
+                    goal: u.goal || 0
+                })).sort((a,b) => b.total - a.total);
+
+                const maxVal = ranking[0]?.total || 1;
+                const fmt = v => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+                rankEl.innerHTML = ranking.map((r, i) => {
+                    const pct = Math.min((r.total / maxVal) * 100, 100);
+                    const goalPct = r.goal > 0 ? Math.min((r.total / r.goal) * 100, 100) : null;
+                    const medals = ['🥇','🥈','🥉'];
+                    return `<div class="ranking-row" style="flex-direction:column; align-items:stretch; gap:6px; padding:10px 14px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="ranking-pos">${medals[i] || i+1}</div>
+                            <div style="flex:1;">
+                                <div class="ranking-name">${r.name}</div>
+                                <div style="font-size:10px; color:#9ca3af;">${r.count} venda${r.count!==1?'s':''}</div>
+                            </div>
+                            <div class="ranking-val">${fmt(r.total)}</div>
+                        </div>
+                        <div style="background:#f3f4f6; height:5px; border-radius:3px; overflow:hidden;">
+                            <div style="width:${pct}%; height:100%; background:#fbbf24; border-radius:3px;"></div>
+                        </div>
+                        ${goalPct !== null ? `<div style="font-size:9px; color:${goalPct>=100?'#10b981':'#6b7280'}; text-align:right;">${goalPct.toFixed(0)}% da meta</div>` : ''}
+                    </div>`;
+                }).join('') || '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">Sem vendas neste período.</div>';
+            },
+
             renderKPIs: () => {
                 const isG = APP.user.role === 'gestor' || APP.user.role === 'assistente';
                 const scope = isG ? APP.data.deals : APP.data.deals.filter(d => d.owner === APP.user.name);
