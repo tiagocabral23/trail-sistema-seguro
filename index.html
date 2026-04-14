@@ -1171,13 +1171,14 @@
                         }
 
                         // Observações internas — texto colapsável, sem ícone, separado visualmente do histórico
+                        const lastObsCard = d.history ? [...d.history].reverse().find(h => h.action === 'Observação') : null;
                         let obsHtml = '';
-                        if(d.obs && d.obs.trim()) {
+                        if(lastObsCard && lastObsCard.detail) {
+                            const d_obs = lastObsCard.detail;
                             const obsId = 'obs-' + d.id;
-                            const isTruncated = d.obs.length > 55;
-                            const preview = isTruncated ? d.obs.slice(0, 55) + '...' : d.obs;
-                            // Salva o texto completo como atributo para evitar problemas com aspas/quebras de linha
-                            obsHtml = `<div class="card-obs-preview" data-obs-full="${encodeURIComponent(d.obs)}" data-obs-id="${obsId}" data-expanded="false" onclick="event.stopPropagation(); APP.toggleObs(this)">
+                            const isTruncated = d_obs.length > 55;
+                            const preview = isTruncated ? d_obs.slice(0, 55) + '...' : d_obs;
+                            obsHtml = `<div class="card-obs-preview" data-obs-full="${encodeURIComponent(d_obs)}" data-obs-id="${obsId}" data-expanded="false" onclick="event.stopPropagation(); APP.toggleObs(this)">
                                 <span style="color:#9ca3af; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:2px;">📝 nota interna <span class="obs-arrow">▾</span></span>
                                 <span class="obs-text">${preview}</span>
                             </div>`;
@@ -1270,8 +1271,7 @@
                     next_date: document.getElementById('deal-next-date').value || null,
                     next_desc: document.getElementById('deal-next-desc').value,
                     owner: selectedOwner || APP.user.name,
-                    city: document.getElementById('deal-city').value || null,
-                    obs: document.getElementById('deal-obs').value || null
+                    city: document.getElementById('deal-city').value || null
                 };
 
                 const cityInput = document.getElementById('deal-city').value;
@@ -1309,6 +1309,14 @@
                         }
                     }
                     let newHist = oldDeal && oldDeal.history ? oldDeal.history : [];
+                    const obsVal = document.getElementById('deal-obs').value.trim();
+                    if (obsVal) {
+                        // Só registra se a obs mudou em relação à última salva
+                        const lastObs = newHist.filter(h => h.action === 'Observação').pop();
+                        if (!lastObs || lastObs.detail !== obsVal) {
+                            newHist.push({date: new Date().toISOString(), user: APP.user.name, action: 'Observação', detail: obsVal});
+                        }
+                    }
                     if (dealData.next_date && (dealData.next_date !== (oldDeal ? oldDeal.next_date : ''))) {
                         const dateBr = dealData.next_date.split('-').reverse().join('/');
                         newHist.push({date: new Date().toISOString(), user: APP.user.name, action: 'Agenda', detail: `Nova ação: ${dateBr} - ${dealData.next_desc}`});
@@ -1327,6 +1335,8 @@
                         const dateBr = dealData.next_date.split('-').reverse().join('/');
                         dealData.history.push({date: new Date().toISOString(), user: APP.user.name, action: 'Agenda', detail: `Inicial: ${dateBr} - ${dealData.next_desc}`});
                     }
+                    const obsValNew = document.getElementById('deal-obs').value.trim();
+                    if(obsValNew) dealData.history.push({date: new Date().toISOString(), user: APP.user.name, action: 'Observação', detail: obsValNew});
                     
                     const { error } = await dbClient.from('deals').insert(dealData);
                     if(error) return alert("Erro ao criar oportunidade: " + error.message);
@@ -1361,7 +1371,8 @@
                 document.getElementById('deal-type').value = d.deal_type || (d.stock_id ? 'maquina' : 'consorcio'); 
                 document.getElementById('deal-next-date').value = d.next_date || ''; 
                 document.getElementById('deal-next-desc').value = d.next_desc || ''; 
-                document.getElementById('deal-obs').value = d.obs || ''; 
+                const lastObsEntry = d.history ? [...d.history].reverse().find(h => h.action === 'Observação') : null;
+                document.getElementById('deal-obs').value = lastObsEntry ? lastObsEntry.detail : '';
                 if (document.getElementById('deal-owner')) document.getElementById('deal-owner').value = d.owner;
                 // Mostra campo de data de fechamento apenas para gestor/assistente em negócios ganhos
                 const closeDateDiv = document.getElementById('div-deal-close-date');
