@@ -397,6 +397,8 @@
                 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
                     <button class="funil-type-btn active" onclick="APP.setFunilType('todos')" id="ftype-todos">Todos</button>
                     <button class="funil-type-btn" onclick="APP.setFunilType('maquina')" id="ftype-maquina">🚜 Máquinas</button>
+                    <button class="funil-type-btn" onclick="APP.setFunilType('implemento')" id="ftype-implemento">🔧 Implementos</button>
+                    <button class="funil-type-btn" onclick="APP.setFunilType('outros')" id="ftype-outros">📦 Outros</button>
                     <button class="funil-type-btn" onclick="APP.setFunilType('consorcio')" id="ftype-consorcio">📄 Consórcios</button>
                 </div>
                 <div id="kanban-board" class="kanban-board"></div>
@@ -497,7 +499,7 @@
                     <select id="deal-source"><option value="Loja/Passante">Loja / Passante</option><option value="Indicacao">Indicação</option><option value="Visita">Visita</option><option value="Instagram">Instagram / Facebook</option><option value="Google">Google / Site</option><option value="Feira">Feira / Evento</option><option value="Outros">Outros</option></select>
                 </div>
                 <div class="form-item"><label>Valor (R$)</label><input id="deal-value" required oninput="APP.maskMoney(this)"></div>
-                <div class="form-item"><label>Tipo</label><select id="deal-type" onchange="APP.toggleStock()"><option value="maquina">Máquina</option><option value="consorcio">Consórcio</option></select></div>
+                <div class="form-item"><label>Tipo</label><select id="deal-type" onchange="APP.toggleStock()"><option value="maquina">🚜 Máquina (Trator)</option><option value="implemento">🔧 Implemento</option><option value="outros">📦 Outros</option><option value="consorcio">📄 Consórcio</option></select></div>
                 <div class="form-item" id="div-stock-select"><label>Vincular Máquina</label><select id="deal-stock"></select></div>
                 <hr style="border:0; border-top:1px solid #e5e7eb; margin:15px 0;">
                 <div class="form-item" id="div-deal-close-date" style="display:none;">
@@ -1083,8 +1085,10 @@
                 }
 
                 // Filtro por tipo
-                if(APP.funilType === 'maquina') deals = deals.filter(d => d.deal_type !== 'consorcio');
-                if(APP.funilType === 'consorcio') deals = deals.filter(d => d.deal_type === 'consorcio');
+                if(APP.funilType === 'maquina')     deals = deals.filter(d => d.deal_type === 'maquina');
+                if(APP.funilType === 'implemento')  deals = deals.filter(d => d.deal_type === 'implemento');
+                if(APP.funilType === 'outros')      deals = deals.filter(d => d.deal_type === 'outros');
+                if(APP.funilType === 'consorcio')   deals = deals.filter(d => d.deal_type === 'consorcio');
 
                 // Filtro por busca
                 const searchTerm = (document.getElementById('funil-search') ? document.getElementById('funil-search').value : '').toLowerCase().trim();
@@ -1153,9 +1157,18 @@
                         let productDisplay = '';
                         if(d.stock_id) {
                             const s = APP.data.stock.find(x => x.id == d.stock_id);
-                            productDisplay = s ? `<div style="font-size:10px; font-weight:700; color:#1f2937; background:#f3f4f6; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block; border:1px solid #e5e7eb;">🚜 ${s.model}</div>` : '';
-                        } else {
+                            const typeIcon  = d.deal_type === 'implemento' ? '🔧' : d.deal_type === 'outros' ? '📦' : '🚜';
+                            const typeBg    = d.deal_type === 'implemento' ? '#eff6ff' : d.deal_type === 'outros' ? '#f5f3ff' : '#f3f4f6';
+                            const typeBorder= d.deal_type === 'implemento' ? '#bfdbfe' : d.deal_type === 'outros' ? '#ddd6fe' : '#e5e7eb';
+                            const typeColor = d.deal_type === 'implemento' ? '#1d4ed8' : d.deal_type === 'outros' ? '#6d28d9' : '#1f2937';
+                            productDisplay = s
+                                ? `<div style="font-size:10px; font-weight:700; color:${typeColor}; background:${typeBg}; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block; border:1px solid ${typeBorder};">${typeIcon} ${s.model}</div>`
+                                : `<div style="font-size:10px; font-weight:700; color:#6b7280; background:#f3f4f6; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block;">${typeIcon} Sem máquina</div>`;
+                        } else if(d.deal_type === 'consorcio') {
                             productDisplay = `<div style="font-size:10px; font-weight:700; color:#059669; background:#ecfdf5; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block; border:1px solid #a7f3d0;">📄 Consórcio</div>`;
+                        } else {
+                            const typeIcon = d.deal_type === 'implemento' ? '🔧' : d.deal_type === 'outros' ? '📦' : '🚜';
+                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#6b7280; background:#f3f4f6; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block;">${typeIcon} Sem estoque vinculado</div>`;
                         }
 
                         // Próxima ação
@@ -1368,7 +1381,7 @@
                 document.getElementById('deal-city').value = cityValue;
                 document.getElementById('deal-source').value = d.source || 'Loja/Passante';
                 document.getElementById('deal-value').value = d.value.toLocaleString('pt-BR', {minimumFractionDigits:2}); 
-                document.getElementById('deal-type').value = d.deal_type || (d.stock_id ? 'maquina' : 'consorcio'); 
+                document.getElementById('deal-type').value = d.deal_type || (d.stock_id ? 'maquina' : 'consorcio');
                 document.getElementById('deal-next-date').value = d.next_date || ''; 
                 document.getElementById('deal-next-desc').value = d.next_desc || ''; 
                 const lastObsEntry = d.history ? [...d.history].reverse().find(h => h.action === 'Observação') : null;
