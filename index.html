@@ -1236,8 +1236,8 @@
 
             prepareDeal: (preselectedStockId = null) => {
                 document.getElementById('deal-id').value = '';
+                // Stock select é populado pelo refreshStockSelect após definir o tipo
                 const sel = document.getElementById('deal-stock'); sel.innerHTML = '<option value="">Sem Máquina</option>';
-                APP.data.stock.filter(s => s.status !== 'Vendido').forEach(s => { const selected = preselectedStockId === s.id ? 'selected' : ''; sel.innerHTML += `<option value="${s.id}" ${selected}>${s.model} - R$ ${s.cost}</option>`; });
                 
                 const dl = document.getElementById('list-clients');
                 dl.innerHTML = APP.data.clients.map(c => `<option value="${c.name}">`).join('');
@@ -1262,6 +1262,8 @@
                     ownerSelect.innerHTML = `<option value="${APP.user.name}" selected>${APP.user.name}</option>`;
                 }
                 APP.modal('modal-deal');
+                // Popula o select de estoque filtrado pelo tipo atual (após modal abrir)
+                APP.refreshStockSelect(preselectedStockId);
             },
 
             saveDeal: async (e) => {
@@ -1644,7 +1646,49 @@
                     await APP.reloadTable('stock');
                 }
             },
-            toggleStock: () => { const type = document.getElementById('deal-type').value; document.getElementById('div-stock-select').style.display = type === 'consorcio' ? 'none' : 'block'; },
+            toggleStock: () => {
+                const type = document.getElementById('deal-type').value;
+                // Oculta o seletor só para consórcio
+                document.getElementById('div-stock-select').style.display = type === 'consorcio' ? 'none' : 'block';
+                // Atualiza label dinamicamente
+                const lbl = document.querySelector('#div-stock-select label');
+                if(lbl) {
+                    if(type === 'implemento') lbl.innerText = 'Vincular Implemento';
+                    else if(type === 'outros') lbl.innerText = 'Vincular Item';
+                    else lbl.innerText = 'Vincular Máquina';
+                }
+                // Refaz o select filtrado pelo novo tipo
+                APP.refreshStockSelect(document.getElementById('deal-stock').value || null);
+            },
+
+            refreshStockSelect: (preselectedStockId = null) => {
+                const type = document.getElementById('deal-type') ? document.getElementById('deal-type').value : 'maquina';
+                const sel  = document.getElementById('deal-stock');
+                if (!sel) return;
+
+                // Mapeamento: qual tipo de estoque mostrar para cada tipo de negócio
+                const typeMap = {
+                    maquina:    ['Trator'],
+                    implemento: ['Implemento'],
+                    outros:     ['Outros'],
+                };
+                const allowedTypes = typeMap[type]; // undefined = todos (não filtra)
+
+                const available = APP.data.stock.filter(s => {
+                    if (s.status === 'Vendido') return false;
+                    if (allowedTypes) return allowedTypes.includes(s.type);
+                    return true;
+                });
+
+                const placeholder = type === 'implemento' ? 'Sem Implemento' : type === 'outros' ? 'Sem Item' : 'Sem Máquina';
+                sel.innerHTML = `<option value="">${placeholder}</option>`;
+                available.forEach(s => {
+                    // Mostra: Modelo + monobloco (se tiver) — sem preço
+                    const label = s.mono ? `${s.model} — ${s.mono}` : s.model;
+                    const selected = (preselectedStockId && String(preselectedStockId) === String(s.id)) ? 'selected' : '';
+                    sel.innerHTML += `<option value="${s.id}" ${selected}>${label}</option>`;
+                });
+            },
 
             // --- IMPORTAÇÃO DE ESTOQUE POR PLANILHA ---
             _importRows: [],
