@@ -63,8 +63,8 @@
         .kanban-board { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; height: calc(100vh - 200px); }
         .kanban-col { background: var(--kanban-col-bg); min-width: 280px; max-width: 280px; border-radius: 8px; display: flex; flex-direction: column; }
         .kanban-header { padding: 12px; font-weight: 800; color: #fff; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; font-size: 11px; }
-        .kanban-list { padding: 10px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
-        .card { background: var(--card-bg); padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border-left: 4px solid #111827; cursor: grab; transition: .2s; }
+        .kanban-list { padding: 8px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .card { background: var(--card-bg); padding: 8px 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-left: 3px solid #111827; cursor: grab; transition: .2s; }
         .card:active { cursor: grabbing; }
         .card.dragging { opacity: 0.5; transform: rotate(2deg); }
         .card.stagnant { border-color: #ef4444; background: #fff5f5; position: relative; }
@@ -117,7 +117,7 @@
         .funil-type-btn { padding:6px 14px; border:1px solid #e5e7eb; background:#fff; color:#4b5563; font-size:11px; font-weight:700; cursor:pointer; border-radius:6px; text-transform:uppercase; transition:0.15s; }
         .funil-type-btn:hover { background:#f3f4f6; }
         .funil-type-btn.active { background:#1f2937; color:#fbbf24; border-color:#1f2937; }
-        .card-obs-preview { font-size:10px; color:#6b7280; background:#f9fafb; border-top:1px dashed #e5e7eb; margin-top:8px; padding-top:6px; cursor:pointer; line-height:1.4; }
+        .card-obs-preview { font-size:10px; color:#6b7280; background:#f9fafb; border-top:1px dashed #e5e7eb; margin-top:5px; padding-top:4px; cursor:pointer; line-height:1.3; }
         .card-obs-preview:hover { color:#374151; }
         .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 700; font-size: 11px; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-main { background: #fbbf24; color: #000; }
@@ -156,7 +156,7 @@
         .gestor-only { display: none !important; }
         .show-gestor { display: inline-flex !important; }
         
-        .card-action { margin-top: 8px; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f3f4f6; }
+        .card-action { margin-top: 5px; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; background: #f3f4f6; line-height: 1.4; }
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fbbf24; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: .3s; z-index: 3000; font-weight: 700; font-size: 12px; }
 
         /* ── Dropdown Ações Funil ── */
@@ -1362,13 +1362,13 @@
                             const typeBorder= d.deal_type === 'implemento' ? '#bfdbfe' : d.deal_type === 'outros' ? '#ddd6fe' : '#e5e7eb';
                             const typeColor = d.deal_type === 'implemento' ? '#1d4ed8' : d.deal_type === 'outros' ? '#6d28d9' : '#1f2937';
                             productDisplay = s
-                                ? `<div style="font-size:10px; font-weight:700; color:${typeColor}; background:${typeBg}; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block; border:1px solid ${typeBorder};">${typeIcon} ${s.model}</div>`
-                                : `<div style="font-size:10px; font-weight:700; color:#6b7280; background:#f3f4f6; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block;">${typeIcon} Sem máquina</div>`;
+                                ? `<div style="font-size:10px; font-weight:700; color:${typeColor}; background:${typeBg}; padding:1px 5px; border-radius:3px; display:inline-block; border:1px solid ${typeBorder}; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${typeIcon} ${s.model}</div>`
+                                : `<div style="font-size:10px; font-weight:700; color:#6b7280; background:#f3f4f6; padding:1px 5px; border-radius:3px; display:inline-block;">${typeIcon} Sem máquina</div>`;
                         } else if(d.deal_type === 'consorcio') {
-                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#059669; background:#ecfdf5; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block; border:1px solid #a7f3d0;">📄 Consórcio</div>`;
+                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#059669; background:#ecfdf5; padding:1px 5px; border-radius:3px; display:inline-block; border:1px solid #a7f3d0;">📄 Consórcio</div>`;
                         } else {
                             const typeIcon = d.deal_type === 'implemento' ? '🔧' : d.deal_type === 'outros' ? '📦' : '🚜';
-                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#6b7280; background:#f3f4f6; padding:2px 5px; border-radius:3px; margin-bottom:6px; display:inline-block;">${typeIcon} Sem estoque vinculado</div>`;
+                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#6b7280; background:#f3f4f6; padding:1px 5px; border-radius:3px; display:inline-block;">${typeIcon} Sem estoque vinculado</div>`;
                         }
 
                         // Próxima ação
@@ -1407,17 +1407,18 @@
                         card.draggable = true;
                         card.innerHTML = `
                             <div class="card-checkbox-wrap"><input type="checkbox" class="bulk-cb" ${APP.selectedDealIds.has(String(d.id)) ? 'checked' : ''} onclick="event.stopPropagation(); APP.toggleDealSelect('${d.id}', this.checked)"></div>
-                            <div class="card-tags">
-                                <span class="tag">👤 ${d.owner}</span>
-                                <div class="card-btn-group">
-                                    <button class="btn-card-icon" onclick="event.stopPropagation(); APP.viewHistory('${d.id}', 'deal')" title="Ver Histórico">📜 Histórico</button>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:4px; margin-bottom:4px;">
+                                <div style="font-weight:900; font-size:13px; color:#111827; line-height:1.2; flex:1;">${d.client}</div>
+                                <div class="card-btn-group" style="flex-shrink:0;">
+                                    <button class="btn-card-icon" onclick="event.stopPropagation(); APP.viewHistory('${d.id}', 'deal')" title="Histórico">📜</button>
                                     ${dupBtn}
                                     ${delBtn}
                                 </div>
                             </div>
-                            <div style="font-weight:900; font-size:14px; margin-bottom:4px; color:#111827;">${d.client}</div>
-                            ${productDisplay}
-                            <div style="font-weight:700; color:#4b5563;">${fmt(d.value||0)}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:${actionHtml || obsHtml ? '5px' : '0'};">
+                                ${productDisplay}
+                                <div style="font-weight:800; font-size:12px; color:#374151; white-space:nowrap;">${fmt(d.value||0)}</div>
+                            </div>
                             ${actionHtml}
                             ${obsHtml}
                         `;
