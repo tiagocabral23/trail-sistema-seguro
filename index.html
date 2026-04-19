@@ -159,6 +159,16 @@
         .card-action { margin-top: 8px; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f3f4f6; }
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fbbf24; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: .3s; z-index: 3000; font-weight: 700; font-size: 12px; }
 
+        /* ── Dropdown Ações Funil ── */
+        .dropdown-actions { position: relative; display: inline-block; }
+        .dropdown-actions-menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #1f2937; border-radius: 8px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 999; overflow: hidden; }
+        .dropdown-actions-menu.open { display: block; animation: fadeIn 0.15s; }
+        .dropdown-actions-menu button { width: 100%; padding: 12px 16px; background: none; border: none; color: #e2e8f0; text-align: left; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #374151; transition: 0.15s; text-transform: uppercase; }
+        .dropdown-actions-menu button:last-child { border-bottom: none; }
+        .dropdown-actions-menu button:hover { background: #374151; color: #fbbf24; }
+        .btn-actions-toggle { background: #1f2937; color: #fbbf24; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 800; font-size: 11px; cursor: pointer; display: none; align-items: center; gap: 6px; text-transform: uppercase; transition: 0.2s; }
+        .btn-actions-toggle:hover { background: #374151; }
+
         /* ── Bulk Delete ── */
         .card-checkbox-wrap { position: absolute; top: 8px; left: 8px; z-index: 10; display: none; }
         .card-checkbox-wrap input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #ef4444; }
@@ -406,8 +416,14 @@
                         <input id="funil-search" type="text" placeholder="🔍 Filtrar por cliente..." oninput="APP.renderKanban()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; width:180px;">
                         <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:7px 10px; border-radius:6px; border:1px solid #d1d5db; font-size:12px;"></select>
                         <button onclick="APP.prepareDeal()" class="btn btn-main">+ Nova Oportunidade</button>
-                        <button id="btn-bulk-mode" onclick="APP.toggleBulkMode()" class="btn btn-danger" style="display:none;">☑️ Selecionar em Lote</button>
-                        <button id="btn-import-funil" onclick="APP.prepareImportFunil()" class="btn btn-dark" style="display:none;">📥 Importar Backup</button>
+                        <!-- Dropdown Ações (gestor) -->
+                        <div class="dropdown-actions" id="funil-actions-dropdown" style="display:none;">
+                            <button class="btn-actions-toggle" id="btn-funil-actions" onclick="APP.toggleFunilActions(event)" style="display:inline-flex;">⚙️ Ações ▾</button>
+                            <div class="dropdown-actions-menu" id="funil-actions-menu">
+                                <button onclick="APP.toggleFunilActions(); APP.toggleBulkMode()">☑️ Selecionar em Lote</button>
+                                <button onclick="APP.toggleFunilActions(); APP.prepareImportFunil()">📥 Importar Backup</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <!-- Resumo rápido -->
@@ -992,10 +1008,7 @@
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = APP.user.role === 'gestor' ? 'flex' : 'none');
                     const btnMigrate = document.getElementById('btn-migrate-cities');
                     if (btnMigrate) btnMigrate.style.display = APP.user.role === 'gestor' ? 'block' : 'none';
-                    const btnBulk = document.getElementById('btn-bulk-mode');
-                    if (btnBulk) btnBulk.style.display = isG ? 'inline-flex' : 'none';
-                    const btnImpFunil = document.getElementById('btn-import-funil');
-                    if (btnImpFunil) btnImpFunil.style.display = APP.user.role === 'gestor' ? 'inline-flex' : 'none';
+                    // Dropdown ações funil — visível apenas para gestor (controlado pelo nav)
                 }
             },
 
@@ -1090,13 +1103,13 @@
                 
                 document.getElementById('page-title').innerText = tab.toUpperCase();
 
-                // Mostrar botão de seleção em lote apenas no funil (gestor/assistente)
-                const btnBulk = document.getElementById('btn-bulk-mode');
+                // Dropdown Ações — aparece no funil apenas para gestor
                 const isG = APP.user && (APP.user.role === 'gestor' || APP.user.role === 'assistente');
-                if (btnBulk) btnBulk.style.display = (tab === 'funil' && isG) ? 'inline-flex' : 'none';
-                // Botão importar funil — apenas gestor
-                const btnImpFunil = document.getElementById('btn-import-funil');
-                if (btnImpFunil) btnImpFunil.style.display = (tab === 'funil' && APP.user && APP.user.role === 'gestor') ? 'inline-flex' : 'none';
+                const dropdownEl = document.getElementById('funil-actions-dropdown');
+                if (dropdownEl) dropdownEl.style.display = (tab === 'funil' && APP.user && APP.user.role === 'gestor') ? 'inline-block' : 'none';
+                // Fecha o menu se estiver aberto ao trocar de aba
+                const menuEl = document.getElementById('funil-actions-menu');
+                if (menuEl) menuEl.classList.remove('open');
                 // Se sair do funil, encerra modo bulk
                 if (tab !== 'funil' && APP.bulkMode) APP.toggleBulkMode();
 
@@ -1131,20 +1144,23 @@
             bulkMode: false,
             selectedDealIds: new Set(),
 
+            toggleFunilActions: (e) => {
+                if (e) e.stopPropagation();
+                const menu = document.getElementById('funil-actions-menu');
+                if (menu) menu.classList.toggle('open');
+            },
+
             toggleBulkMode: () => {
                 APP.bulkMode = !APP.bulkMode;
                 APP.selectedDealIds.clear();
                 const board = document.getElementById('kanban-board');
                 const bar   = document.getElementById('bulk-bar');
-                const btn   = document.getElementById('btn-bulk-mode');
                 if (APP.bulkMode) {
                     board.classList.add('bulk-mode');
                     bar.classList.add('active');
-                    if (btn) { btn.textContent = '✖ Sair Seleção'; btn.style.background = '#374151'; btn.style.color = '#fff'; }
                 } else {
                     board.classList.remove('bulk-mode');
                     bar.classList.remove('active');
-                    if (btn) { btn.textContent = '☑️ Selecionar'; btn.style.background = ''; btn.style.color = ''; }
                 }
                 APP.updateBulkBar();
                 APP.renderKanban();
@@ -1203,10 +1219,8 @@
                 APP.bulkMode = false;
                 const board = document.getElementById('kanban-board');
                 const bar   = document.getElementById('bulk-bar');
-                const btn   = document.getElementById('btn-bulk-mode');
                 if (board) board.classList.remove('bulk-mode');
                 if (bar)   bar.classList.remove('active');
-                if (btn)   { btn.textContent = '☑️ Selecionar'; btn.style.background = ''; btn.style.color = ''; }
                 await APP.reloadTable('deals');
                 await APP.reloadTable('stock');
             },
@@ -3405,6 +3419,14 @@
                 const btn = document.getElementById('btn-dark-mode');
                 if(btn) btn.innerText = '☀️';
             }
+            // Fecha dropdown de ações ao clicar fora
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('funil-actions-menu');
+                const toggle = document.getElementById('btn-funil-actions');
+                if (menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target !== toggle) {
+                    menu.classList.remove('open');
+                }
+            });
         });
     </script>
 </body></html>
