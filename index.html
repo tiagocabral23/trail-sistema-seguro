@@ -406,7 +406,7 @@
                         <input id="funil-search" type="text" placeholder="🔍 Filtrar por cliente..." oninput="APP.renderKanban()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; width:180px;">
                         <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:7px 10px; border-radius:6px; border:1px solid #d1d5db; font-size:12px;"></select>
                         <button onclick="APP.prepareDeal()" class="btn btn-main">+ Nova Oportunidade</button>
-                        <button id="btn-bulk-mode" onclick="APP.toggleBulkMode()" class="btn btn-danger gestor-only" style="display:none;">☑️ Selecionar</button>
+                        <button id="btn-bulk-mode" onclick="APP.toggleBulkMode()" class="btn btn-danger" style="display:none;">☑️ Selecionar em Lote</button>
                     </div>
                 </div>
                 <!-- Resumo rápido -->
@@ -1034,6 +1034,13 @@
                 if (btnEl) btnEl.classList.add('active');
                 
                 document.getElementById('page-title').innerText = tab.toUpperCase();
+
+                // Mostrar botão de seleção em lote apenas no funil (gestor/assistente)
+                const btnBulk = document.getElementById('btn-bulk-mode');
+                const isG = APP.user && (APP.user.role === 'gestor' || APP.user.role === 'assistente');
+                if (btnBulk) btnBulk.style.display = (tab === 'funil' && isG) ? 'inline-flex' : 'none';
+                // Se sair do funil, encerra modo bulk
+                if (tab !== 'funil' && APP.bulkMode) APP.toggleBulkMode();
 
                 if(tab==='estoque') APP.renderStock();
                 if(tab==='funil') APP.renderKanban();
