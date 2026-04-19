@@ -409,33 +409,43 @@
             </section>
 
             <section id="tab-funil" class="tab-content">
-                <!-- Toolbar -->
-                <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <h3 style="font-weight:900;">MEU FUNIL</h3>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <input id="funil-search" type="text" placeholder="🔍 Filtrar por cliente..." oninput="APP.renderKanban()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; width:180px;">
-                        <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:7px 10px; border-radius:6px; border:1px solid #d1d5db; font-size:12px;"></select>
-                        <button onclick="APP.prepareDeal()" class="btn btn-main">+ Nova Oportunidade</button>
-                        <!-- Dropdown Ações (gestor) -->
-                        <div class="dropdown-actions" id="funil-actions-dropdown" style="display:none;">
-                            <button class="btn-actions-toggle" id="btn-funil-actions" onclick="APP.toggleFunilActions(event)" style="display:inline-flex;">⚙️ Ações ▾</button>
-                            <div class="dropdown-actions-menu" id="funil-actions-menu">
-                                <button onclick="APP.toggleFunilActions(); APP.toggleBulkMode()">☑️ Selecionar em Lote</button>
-                                <button onclick="APP.toggleFunilActions(); APP.prepareImportFunil()">📥 Importar Backup</button>
+                <!-- ── FUNIL HEADER ── -->
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px 18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.05);">
+                    <!-- Linha 1: título + botão principal + engrenagem -->
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="background:#fbbf24; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">⚡</div>
+                            <div>
+                                <div style="font-weight:900; font-size:15px; color:#111827; line-height:1.1;">MEU FUNIL</div>
+                                <div style="font-size:10px; color:#9ca3af; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-top:1px;">Oportunidades de Venda</div>
                             </div>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button onclick="APP.prepareDeal()" class="btn btn-main">＋ Nova Oportunidade</button>
+                            <div class="dropdown-actions" id="funil-actions-dropdown" style="display:none;">
+                                <button class="btn-actions-toggle" id="btn-funil-actions" onclick="APP.toggleFunilActions(event)" style="display:inline-flex; padding:8px 11px; font-size:14px;" title="Ações de gestão">⚙️</button>
+                                <div class="dropdown-actions-menu" id="funil-actions-menu">
+                                    <button onclick="APP.toggleFunilActions(); APP.toggleBulkMode()">☑️ Selecionar em Lote</button>
+                                    <button onclick="APP.toggleFunilActions(); APP.prepareImportFunil()">📥 Importar Backup</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Linha 2: filtros + tipo -->
+                    <div style="display:flex; gap:8px; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid #f3f4f6; flex-wrap:wrap;">
+                        <input id="funil-search" type="text" placeholder="🔍 Filtrar por cliente..." oninput="APP.renderKanban()" style="padding:7px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:12px; min-width:170px; flex:1; background:#f9fafb;">
+                        <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:7px 10px; border-radius:8px; border:1px solid #e5e7eb; font-size:12px; background:#f9fafb;"></select>
+                        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                            <button class="funil-type-btn active" onclick="APP.setFunilType('todos')"       id="ftype-todos">Todos</button>
+                            <button class="funil-type-btn"        onclick="APP.setFunilType('maquina')"    id="ftype-maquina">🚜 Máquinas</button>
+                            <button class="funil-type-btn"        onclick="APP.setFunilType('implemento')" id="ftype-implemento">🔧 Implementos</button>
+                            <button class="funil-type-btn"        onclick="APP.setFunilType('outros')"     id="ftype-outros">📦 Outros</button>
+                            <button class="funil-type-btn"        onclick="APP.setFunilType('consorcio')"  id="ftype-consorcio">📄 Consórcios</button>
                         </div>
                     </div>
                 </div>
                 <!-- Resumo rápido -->
                 <div id="funil-summary" style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;"></div>
-                <!-- Toggle tipo -->
-                <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
-                    <button class="funil-type-btn active" onclick="APP.setFunilType('todos')" id="ftype-todos">Todos</button>
-                    <button class="funil-type-btn" onclick="APP.setFunilType('maquina')" id="ftype-maquina">🚜 Máquinas</button>
-                    <button class="funil-type-btn" onclick="APP.setFunilType('implemento')" id="ftype-implemento">🔧 Implementos</button>
-                    <button class="funil-type-btn" onclick="APP.setFunilType('outros')" id="ftype-outros">📦 Outros</button>
-                    <button class="funil-type-btn" onclick="APP.setFunilType('consorcio')" id="ftype-consorcio">📄 Consórcios</button>
-                </div>
                 <div id="kanban-board" class="kanban-board"></div>
                 <!-- Bulk Delete Bar -->
                 <div id="bulk-bar">
