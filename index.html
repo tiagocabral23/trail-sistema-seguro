@@ -407,6 +407,7 @@
                         <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:7px 10px; border-radius:6px; border:1px solid #d1d5db; font-size:12px;"></select>
                         <button onclick="APP.prepareDeal()" class="btn btn-main">+ Nova Oportunidade</button>
                         <button id="btn-bulk-mode" onclick="APP.toggleBulkMode()" class="btn btn-danger" style="display:none;">☑️ Selecionar em Lote</button>
+                        <button id="btn-import-funil" onclick="APP.prepareImportFunil()" class="btn btn-dark" style="display:none;">📥 Importar Backup</button>
                     </div>
                 </div>
                 <!-- Resumo rápido -->
@@ -565,6 +566,58 @@
     </div>
 
     <!-- MODAL IMPORTAÇÃO DE ESTOQUE -->
+    <div id="modal-import-funil" class="modal">
+        <div class="modal-box" style="width:780px; max-width:96vw;">
+            <h3>📥 Importar Funil de Vendas (Backup Excel)</h3>
+
+            <!-- Passo 1: upload -->
+            <div id="funil-import-step-1">
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin:15px 0; font-size:12px; color:#1e40af;">
+                    <strong>Como funciona:</strong><br><br>
+                    Selecione o arquivo <b>.xlsx</b> gerado pelo <b>Backup Excel</b> do Trail System.<br>
+                    O sistema vai ler a aba <b>"Negócios"</b> e importar os deals usando o <b>ID</b> para evitar duplicatas.<br><br>
+                    <span style="color:#6b7280;">• Negócios com ID já existente no banco serão <b>ignorados</b> (não sobrescreve).</span><br>
+                    <span style="color:#6b7280;">• Negócios sem ID ou com ID novo serão <b>criados</b>.</span><br>
+                    <span style="color:#dc2626;">• Apenas gestores podem realizar esta operação.</span>
+                </div>
+                <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                    <label style="display:flex; flex-direction:column; flex:1; min-width:200px; font-size:10px; font-weight:800; text-transform:uppercase; color:#4b5563; gap:4px;">
+                        Selecionar arquivo de Backup (.xlsx)
+                        <input type="file" id="funil-import-file" accept=".xlsx,.xls" onchange="APP.handleFunilImportFile(event)" style="padding:8px; border:1px solid #d1d5db; border-radius:6px; background:#fff; font-size:12px;">
+                    </label>
+                </div>
+                <button type="button" onclick="APP.closeModals()" class="btn" style="width:100%; margin-top:15px;">Cancelar</button>
+            </div>
+
+            <!-- Passo 2: preview -->
+            <div id="funil-import-step-2" style="display:none;">
+                <div id="funil-import-summary" style="margin:12px 0; font-size:12px; font-weight:700; color:#1f2937; display:flex; gap:10px; flex-wrap:wrap;"></div>
+                <div style="max-height:300px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                        <thead>
+                            <tr style="background:#1f2937; color:#fbbf24; position:sticky; top:0; z-index:1;">
+                                <th style="padding:8px 10px; text-align:left;">#</th>
+                                <th style="padding:8px 10px; text-align:left;">Cliente</th>
+                                <th style="padding:8px 10px; text-align:left;">Etapa</th>
+                                <th style="padding:8px 10px; text-align:left;">Tipo</th>
+                                <th style="padding:8px 10px; text-align:left;">Valor</th>
+                                <th style="padding:8px 10px; text-align:left;">Responsável</th>
+                                <th style="padding:8px 10px; text-align:left;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="funil-import-preview-body"></tbody>
+                    </table>
+                </div>
+                <div id="funil-import-errors" style="display:none; margin-top:10px; background:#fff5f5; border:1px solid #fecaca; border-radius:6px; padding:10px; font-size:11px; color:#991b1b;"></div>
+                <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
+                    <button type="button" onclick="APP.confirmImportFunil()" id="btn-confirm-funil-import" class="btn btn-main" style="flex:1;">✅ Confirmar Importação</button>
+                    <button type="button" onclick="APP.resetFunilImportModal()" class="btn" style="flex:1;">↩️ Outro arquivo</button>
+                    <button type="button" onclick="APP.closeModals()" class="btn btn-danger">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-import-stock" class="modal">
         <div class="modal-box" style="width:720px; max-width:95vw;">
             <h3>📥 Importar Estoque por Planilha</h3>
@@ -941,6 +994,8 @@
                     if (btnMigrate) btnMigrate.style.display = APP.user.role === 'gestor' ? 'block' : 'none';
                     const btnBulk = document.getElementById('btn-bulk-mode');
                     if (btnBulk) btnBulk.style.display = isG ? 'inline-flex' : 'none';
+                    const btnImpFunil = document.getElementById('btn-import-funil');
+                    if (btnImpFunil) btnImpFunil.style.display = APP.user.role === 'gestor' ? 'inline-flex' : 'none';
                 }
             },
 
@@ -1039,6 +1094,9 @@
                 const btnBulk = document.getElementById('btn-bulk-mode');
                 const isG = APP.user && (APP.user.role === 'gestor' || APP.user.role === 'assistente');
                 if (btnBulk) btnBulk.style.display = (tab === 'funil' && isG) ? 'inline-flex' : 'none';
+                // Botão importar funil — apenas gestor
+                const btnImpFunil = document.getElementById('btn-import-funil');
+                if (btnImpFunil) btnImpFunil.style.display = (tab === 'funil' && APP.user && APP.user.role === 'gestor') ? 'inline-flex' : 'none';
                 // Se sair do funil, encerra modo bulk
                 if (tab !== 'funil' && APP.bulkMode) APP.toggleBulkMode();
 
@@ -1962,6 +2020,184 @@
                 APP.toast(`✅ ${total} item(ns) importados com sucesso!`);
                 await APP.reloadTable('stock');
             },
+
+            // ── IMPORTAÇÃO DO FUNIL ──────────────────────────────────────────
+            prepareImportFunil: () => {
+                if (APP.user.role !== 'gestor') return alert('Acesso negado. Apenas gestores podem importar o funil.');
+                APP._funilImportRows = [];
+                APP.resetFunilImportModal();
+                APP.modal('modal-import-funil');
+            },
+
+            resetFunilImportModal: () => {
+                const fi = document.getElementById('funil-import-file');
+                if (fi) fi.value = '';
+                document.getElementById('funil-import-step-1').style.display = 'block';
+                document.getElementById('funil-import-step-2').style.display = 'none';
+                document.getElementById('funil-import-errors').style.display = 'none';
+                document.getElementById('funil-import-preview-body').innerHTML = '';
+                document.getElementById('funil-import-summary').innerHTML = '';
+                APP._funilImportRows = [];
+            },
+
+            handleFunilImportFile: (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+
+                        // Procura aba "Negócios" (aceita variações)
+                        const sheetName = wb.SheetNames.find(n =>
+                            n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes('negocio')
+                        ) || wb.SheetNames[0];
+
+                        const ws = wb.Sheets[sheetName];
+                        const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                        if (!raw.length) { alert('Planilha vazia ou sem dados na aba "Negócios".'); return; }
+
+                        // Normaliza nomes de colunas
+                        const norm = s => s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+                        const findCol = (sample, variants) => {
+                            const keys = Object.keys(sample);
+                            return keys.find(k => variants.some(v => norm(k).includes(norm(v)))) || null;
+                        };
+                        const sample = raw[0];
+
+                        const colId       = findCol(sample, ['id']);
+                        const colClient   = findCol(sample, ['client','cliente']);
+                        const colStage    = findCol(sample, ['stage','etapa','fase']);
+                        const colValue    = findCol(sample, ['value','valor']);
+                        const colOwner    = findCol(sample, ['owner','responsavel','vendedor']);
+                        const colType     = findCol(sample, ['deal_type','tipo']);
+                        const colSource   = findCol(sample, ['source','origem']);
+                        const colNextDate = findCol(sample, ['next_date','proxima','data_acao']);
+                        const colNextDesc = findCol(sample, ['next_desc','descricao_acao','acao']);
+                        const colCity     = findCol(sample, ['city','cidade']);
+                        const colCreated  = findCol(sample, ['created_at','criado']);
+                        const colClose    = findCol(sample, ['close_date','fechamento','data_fechamento']);
+                        const colStockId  = findCol(sample, ['stock_id','estoque_id']);
+                        const colHistory  = findCol(sample, ['history','historico']);
+
+                        if (!colClient) { alert('Coluna "client" ou "cliente" não encontrada. Verifique se é o backup do Trail System.'); return; }
+
+                        // IDs já existentes no banco
+                        const existingIds = new Set(APP.data.deals.map(d => String(d.id)));
+
+                        const rows = [], erros = [], duplicadas = [];
+
+                        raw.forEach((r, i) => {
+                            const client = (r[colClient] || '').toString().trim();
+                            if (!client) { erros.push(`Linha ${i+2}: Cliente vazio — ignorada.`); return; }
+
+                            const rawId = colId ? (r[colId] || '').toString().trim() : '';
+
+                            if (rawId && existingIds.has(rawId)) {
+                                duplicadas.push(client);
+                                return; // pula — já existe
+                            }
+
+                            // Tenta parsear history (pode estar como JSON string)
+                            let history = [];
+                            if (colHistory && r[colHistory]) {
+                                try { history = JSON.parse(r[colHistory]); } catch(e) { history = []; }
+                            }
+                            if (!history.length) {
+                                history = [{ date: new Date().toISOString(), user: APP.user.name, action: 'Importação', detail: 'Restaurado via backup' }];
+                            }
+
+                            const deal = {
+                                client,
+                                stage:     colStage    ? (r[colStage]    || 'prospeccao').toString().trim()  : 'prospeccao',
+                                value:     colValue    ? APP.parseMoney(r[colValue])                         : 0,
+                                owner:     colOwner    ? (r[colOwner]    || APP.user.name).toString().trim() : APP.user.name,
+                                deal_type: colType     ? (r[colType]     || 'maquina').toString().trim()     : 'maquina',
+                                source:    colSource   ? (r[colSource]   || '').toString().trim()            : '',
+                                next_date: colNextDate ? (r[colNextDate] || null)                            : null,
+                                next_desc: colNextDesc ? (r[colNextDesc] || '').toString().trim()            : '',
+                                city:      colCity     ? (r[colCity]     || null)                            : null,
+                                stock_id:  colStockId  ? (r[colStockId]  || null)                            : null,
+                                history,
+                            };
+
+                            // Preserva created_at e close_date se disponíveis
+                            if (colCreated && r[colCreated]) deal.created_at = r[colCreated];
+                            if (colClose   && r[colClose])   deal.close_date = r[colClose];
+
+                            rows.push(deal);
+                        });
+
+                        APP._funilImportRows = rows;
+
+                        // Preview
+                        const fmt = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                        const stageLabels = { prospeccao:'Prospecção', analise_credito:'Análise Crédito', documentacao:'Documentação', contrato:'Contrato', af:'A.F. Final', ganho:'Ganho', perdido:'Perdido' };
+                        const tbody = document.getElementById('funil-import-preview-body');
+                        tbody.innerHTML = rows.map((r, i) => `
+                            <tr style="background:${i%2===0?'#fff':'#f9fafb'}; border-bottom:1px solid #f3f4f6;">
+                                <td style="padding:6px 10px; color:#9ca3af;">${i+1}</td>
+                                <td style="padding:6px 10px; font-weight:700;">${r.client}</td>
+                                <td style="padding:6px 10px;">${stageLabels[r.stage]||r.stage}</td>
+                                <td style="padding:6px 10px; color:#6b7280;">${r.deal_type}</td>
+                                <td style="padding:6px 10px; font-weight:700; color:#059669;">${fmt(r.value)}</td>
+                                <td style="padding:6px 10px;">${r.owner}</td>
+                                <td style="padding:6px 10px;"><span style="background:#d1fae5;color:#065f46;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">Novo</span></td>
+                            </tr>`).join('');
+
+                        // Summary
+                        const sumEl = document.getElementById('funil-import-summary');
+                        sumEl.innerHTML = `
+                            <div style="background:#d1fae5; border:1px solid #a7f3d0; padding:8px 14px; border-radius:8px; font-size:12px; color:#065f46;">✅ <b>${rows.length}</b> negócio(s) prontos para importar</div>
+                            ${duplicadas.length ? `<div style="background:#fef3c7; border:1px solid #fde68a; padding:8px 14px; border-radius:8px; font-size:12px; color:#92400e;">⏭️ <b>${duplicadas.length}</b> já existem (serão ignorados)</div>` : ''}
+                            ${erros.length ? `<div style="background:#fee2e2; border:1px solid #fecaca; padding:8px 14px; border-radius:8px; font-size:12px; color:#991b1b;">⚠️ <b>${erros.length}</b> linha(s) inválida(s)</div>` : ''}
+                        `;
+
+                        if (erros.length) {
+                            const errEl = document.getElementById('funil-import-errors');
+                            errEl.style.display = 'block';
+                            errEl.innerHTML = '<strong>Linhas ignoradas:</strong><br>' + erros.join('<br>');
+                        }
+
+                        const btn = document.getElementById('btn-confirm-funil-import');
+                        btn.disabled = rows.length === 0;
+                        document.getElementById('funil-import-step-1').style.display = 'none';
+                        document.getElementById('funil-import-step-2').style.display = 'block';
+
+                    } catch(err) {
+                        alert('Erro ao ler o arquivo. Verifique se é um .xlsx válido gerado pelo Trail System.\n' + err.message);
+                    }
+                };
+                reader.readAsBinaryString(file);
+            },
+
+            confirmImportFunil: async () => {
+                if (!APP._funilImportRows || !APP._funilImportRows.length) return;
+                const btn = document.getElementById('btn-confirm-funil-import');
+                btn.disabled = true;
+                btn.innerText = '⏳ Importando...';
+
+                const BATCH = 50;
+                let total = 0;
+                for (let i = 0; i < APP._funilImportRows.length; i += BATCH) {
+                    const batch = APP._funilImportRows.slice(i, i + BATCH);
+                    const { error } = await dbClient.from('deals').insert(batch);
+                    if (error) {
+                        alert(`Erro ao importar lote ${Math.floor(i/BATCH)+1}: ${error.message}`);
+                        btn.disabled = false; btn.innerText = '✅ Confirmar Importação';
+                        return;
+                    }
+                    total += batch.length;
+                    btn.innerText = `⏳ ${total}/${APP._funilImportRows.length} importados...`;
+                }
+
+                APP.closeModals();
+                APP.toast(`✅ ${total} negócio(s) importados com sucesso!`);
+                await APP.reloadTable('deals');
+                APP.renderKanban();
+            },
+            // ── FIM IMPORTAÇÃO FUNIL ─────────────────────────────────────────
 
             downloadImportTemplate: () => {
                 const ws = XLSX.utils.aoa_to_sheet([
