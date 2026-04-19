@@ -159,6 +159,23 @@
         .card-action { margin-top: 8px; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #f3f4f6; }
         #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #111827; color: #fbbf24; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: .3s; z-index: 3000; font-weight: 700; font-size: 12px; }
 
+        /* ── Bulk Delete ── */
+        .card-checkbox-wrap { position: absolute; top: 8px; left: 8px; z-index: 10; display: none; }
+        .card-checkbox-wrap input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #ef4444; }
+        .bulk-mode .card-checkbox-wrap { display: block; }
+        .bulk-mode .card { position: relative; padding-left: 34px; }
+        .card.bulk-selected { border-color: #ef4444 !important; background: #fff5f5 !important; outline: 2px solid #ef4444; }
+        #bulk-bar { display: none; position: sticky; bottom: 16px; left: 0; right: 0; z-index: 500; margin: 10px 20px 0; }
+        #bulk-bar.active { display: flex; }
+        #bulk-bar-inner { background: #1f2937; color: #fff; padding: 12px 20px; border-radius: 10px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); flex: 1; flex-wrap: wrap; }
+        #bulk-bar-inner span { font-size: 13px; font-weight: 800; flex: 1; }
+        .btn-bulk-cancel { background: #374151; color: #9ca3af; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; }
+        .btn-bulk-cancel:hover { background: #4b5563; }
+        .btn-bulk-delete { background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 800; font-size: 12px; cursor: pointer; text-transform: uppercase; }
+        .btn-bulk-delete:hover { background: #dc2626; }
+        .btn-bulk-select-all { background: #fbbf24; color: #000; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; }
+        .btn-bulk-select-all:hover { background: #f59e0b; }
+
         @media (max-width: 900px) { .grid-2-col { grid-template-columns: 1fr; } }
         @media (max-width: 768px) {
             #sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); width: 260px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
@@ -389,6 +406,7 @@
                         <input id="funil-search" type="text" placeholder="🔍 Filtrar por cliente..." oninput="APP.renderKanban()" style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; width:180px;">
                         <select id="filter-user" onchange="APP.renderKanban()" style="display:none; padding:7px 10px; border-radius:6px; border:1px solid #d1d5db; font-size:12px;"></select>
                         <button onclick="APP.prepareDeal()" class="btn btn-main">+ Nova Oportunidade</button>
+                        <button id="btn-bulk-mode" onclick="APP.toggleBulkMode()" class="btn btn-danger gestor-only" style="display:none;">☑️ Selecionar</button>
                     </div>
                 </div>
                 <!-- Resumo rápido -->
@@ -402,6 +420,15 @@
                     <button class="funil-type-btn" onclick="APP.setFunilType('consorcio')" id="ftype-consorcio">📄 Consórcios</button>
                 </div>
                 <div id="kanban-board" class="kanban-board"></div>
+                <!-- Bulk Delete Bar -->
+                <div id="bulk-bar">
+                    <div id="bulk-bar-inner">
+                        <span id="bulk-count-label">0 itens selecionados</span>
+                        <button class="btn-bulk-select-all" onclick="APP.bulkSelectAll()">✅ Selecionar Todos</button>
+                        <button class="btn-bulk-cancel" onclick="APP.toggleBulkMode()">✖ Cancelar</button>
+                        <button class="btn-bulk-delete" onclick="APP.bulkDeleteSelected()">🗑️ Excluir Selecionados</button>
+                    </div>
+                </div>
             </section>
 
             <section id="tab-clientes" class="tab-content">
@@ -912,6 +939,8 @@
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = APP.user.role === 'gestor' ? 'flex' : 'none');
                     const btnMigrate = document.getElementById('btn-migrate-cities');
                     if (btnMigrate) btnMigrate.style.display = APP.user.role === 'gestor' ? 'block' : 'none';
+                    const btnBulk = document.getElementById('btn-bulk-mode');
+                    if (btnBulk) btnBulk.style.display = isG ? 'inline-flex' : 'none';
                 }
             },
 
@@ -1034,6 +1063,88 @@
             },
 
             funilType: 'todos',
+            bulkMode: false,
+            selectedDealIds: new Set(),
+
+            toggleBulkMode: () => {
+                APP.bulkMode = !APP.bulkMode;
+                APP.selectedDealIds.clear();
+                const board = document.getElementById('kanban-board');
+                const bar   = document.getElementById('bulk-bar');
+                const btn   = document.getElementById('btn-bulk-mode');
+                if (APP.bulkMode) {
+                    board.classList.add('bulk-mode');
+                    bar.classList.add('active');
+                    if (btn) { btn.textContent = '✖ Sair Seleção'; btn.style.background = '#374151'; btn.style.color = '#fff'; }
+                } else {
+                    board.classList.remove('bulk-mode');
+                    bar.classList.remove('active');
+                    if (btn) { btn.textContent = '☑️ Selecionar'; btn.style.background = ''; btn.style.color = ''; }
+                }
+                APP.updateBulkBar();
+                APP.renderKanban();
+            },
+
+            updateBulkBar: () => {
+                const n = APP.selectedDealIds.size;
+                const label = document.getElementById('bulk-count-label');
+                if (label) label.textContent = `${n} ${n === 1 ? 'item selecionado' : 'itens selecionados'}`;
+            },
+
+            toggleDealSelect: (id, checked) => {
+                if (checked) APP.selectedDealIds.add(id);
+                else APP.selectedDealIds.delete(id);
+                // update card visual
+                const card = document.querySelector(`.card[data-deal-id="${id}"]`);
+                if (card) card.classList.toggle('bulk-selected', checked);
+                APP.updateBulkBar();
+            },
+
+            bulkSelectAll: () => {
+                document.querySelectorAll('.card[data-deal-id]').forEach(card => {
+                    const id = card.dataset.dealId;
+                    APP.selectedDealIds.add(id);
+                    card.classList.add('bulk-selected');
+                    const cb = card.querySelector('.bulk-cb');
+                    if (cb) cb.checked = true;
+                });
+                APP.updateBulkBar();
+            },
+
+            bulkDeleteSelected: async () => {
+                if (APP.user.role !== 'gestor') return alert('Acesso negado.');
+                const ids = [...APP.selectedDealIds];
+                if (ids.length === 0) return alert('Nenhum item selecionado.');
+                const ok = await APP.confirm(
+                    `Serão excluídos ${ids.length} negócio(s). Esta ação não pode ser desfeita.`,
+                    'Excluir em Lote?', '🗑️', 'Excluir Tudo'
+                );
+                if (!ok) return;
+                let erros = 0;
+                for (const id of ids) {
+                    const deal = APP.data.deals.find(d => String(d.id) === String(id));
+                    const { error } = await dbClient.from('deals').delete().eq('id', id);
+                    if (error) { erros++; continue; }
+                    if (deal && deal.stock_id) {
+                        const s = APP.data.stock.find(x => x.id === deal.stock_id);
+                        if (s && (s.status === 'Reservado' || s.status === 'Em Disputa')) {
+                            const newHist = APP.addLog(s, 'Liberação', 'Oportunidade excluída em lote');
+                            await dbClient.from('stock').update({status: 'Disponível', history: newHist}).eq('id', s.id);
+                        }
+                    }
+                }
+                APP.toast(erros > 0 ? `${ids.length - erros} excluídos, ${erros} com erro.` : `${ids.length} excluídos com sucesso!`);
+                APP.selectedDealIds.clear();
+                APP.bulkMode = false;
+                const board = document.getElementById('kanban-board');
+                const bar   = document.getElementById('bulk-bar');
+                const btn   = document.getElementById('btn-bulk-mode');
+                if (board) board.classList.remove('bulk-mode');
+                if (bar)   bar.classList.remove('active');
+                if (btn)   { btn.textContent = '☑️ Selecionar'; btn.style.background = ''; btn.style.color = ''; }
+                await APP.reloadTable('deals');
+                await APP.reloadTable('stock');
+            },
 
             updateAgendaBadge: () => {
                 if (!APP.user) return;
@@ -1202,9 +1313,11 @@
                         const dupBtn = `<button onclick="event.stopPropagation(); APP.duplicateDeal('${d.id}')" class="btn-card-icon" title="Duplicar negócio">📋</button>`;
 
                         const card = document.createElement('div');
-                        card.className = `card ${isStagnant ? 'stagnant' : ''}`;
+                        card.className = `card ${isStagnant ? 'stagnant' : ''}${APP.selectedDealIds.has(String(d.id)) ? ' bulk-selected' : ''}`;
+                        card.dataset.dealId = d.id;
                         card.draggable = true;
                         card.innerHTML = `
+                            <div class="card-checkbox-wrap"><input type="checkbox" class="bulk-cb" ${APP.selectedDealIds.has(String(d.id)) ? 'checked' : ''} onclick="event.stopPropagation(); APP.toggleDealSelect('${d.id}', this.checked)"></div>
                             <div class="card-tags">
                                 <span class="tag">👤 ${d.owner}</span>
                                 <div class="card-btn-group">
