@@ -10,27 +10,32 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         /* TMC — INTELLIGENCE IN MOTION */
         :root {
-            --bg: #141414;
-            --surface: #1c1c1c;
-            --surface2: #222222;
-            --border: #2e2e2e;
-            --text: #e8e8e8;
-            --text-soft: #a0a0a0;
-            --text-muted: #606060;
-            --header-bg: #1a1a1a;
-            --header-border: #2a2a2a;
-            --th-bg: #1a1a1a;
-            --td-border: #242424;
-            --input-bg: #141414;
-            --input-border: #333333;
-            --card-bg: #1c1c1c;
-            --kanban-col-bg: #181818;
-            --filter-bar-bg: #1a1a1a;
-            --silver: #c8c8c8;
-            --silver-bright: #e8e8e8;
-            --silver-dim: #888888;
-            --accent: #d0d0d0;
-            --accent-glow: rgba(200,200,200,0.15);
+            --bg: #111112;
+            --surface: #191919;
+            --surface2: #1f1f1f;
+            --border: #282828;
+            --text: #ececec;
+            --text-soft: #9a9a9a;
+            --text-muted: #585858;
+            --header-bg: #161617;
+            --header-border: #252525;
+            --th-bg: #161617;
+            --td-border: #212121;
+            --input-bg: #111112;
+            --input-border: #2e2e2e;
+            --card-bg: #191919;
+            --kanban-col-bg: #151516;
+            --filter-bar-bg: #161617;
+            /* TMC Silver identity */
+            --silver: #c6c6c6;
+            --silver-bright: #f0f0f0;
+            --silver-mid: #d8d8d8;
+            --silver-dim: #787878;
+            --accent: #d4d4d4;
+            --accent-glow: rgba(210,210,210,0.10);
+            /* Gradient metálico da logo */
+            --logo-gradient: linear-gradient(135deg, #b8b8b8 0%, #f4f4f4 40%, #ffffff 55%, #c8c8c8 75%, #909090 100%);
+            --chrome-gradient: linear-gradient(135deg, #888 0%, #e8e8e8 50%, #aaa 100%);
         }
         body.dark-mode {
             --bg: #141414; --surface: #1c1c1c; --border: #2e2e2e;
@@ -43,15 +48,16 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; outline: 0; }
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
-        #sidebar { width: 260px; background: #111111; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; transition: 0.3s; z-index: 1000; border-right: 1px solid #2a2a2a; }
-        .brand { padding: 22px 25px; text-align: center; background: #0a0a0a; border-bottom: 1px solid #2a2a2a; }
-        .brand h1 { background: linear-gradient(135deg, #c8c8c8 0%, #ffffff 50%, #a0a0a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 22px; font-weight: 900; letter-spacing: 4px; font-style: normal; }
-        .brand p { color: #555; font-size: 8px; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
-        .nav-menu { flex: 1; padding: 16px 0; overflow-y: auto; }
-        .nav-item { width: 100%; padding: 13px 22px; background: none; border: none; color: #606060; text-align: left; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; border-left: 3px solid transparent; }
-        .nav-item:hover { background: #1e1e1e; color: #c8c8c8; border-left-color: #444; }
-        .nav-item.active { background: #1e1e1e; color: #e8e8e8; border-left: 3px solid #c8c8c8; }
-        .sidebar-footer { padding: 16px; text-align: center; font-size: 10px; color: #404040; border-top: 1px solid #222; background: #0a0a0a; letter-spacing: 1px; }
+        #sidebar { width: 260px; background: #0e0e0f; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; transition: 0.3s; z-index: 1000; border-right: 1px solid #222224; }
+        .brand { padding: 22px 25px; text-align: center; background: #080809; border-bottom: 1px solid #222224; position: relative; }
+        .brand::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 1px; background: linear-gradient(90deg, transparent, #555, transparent); }
+        .brand h1 { background: var(--logo-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 22px; font-weight: 900; letter-spacing: 5px; font-style: normal; }
+        .brand p { color: #484848; font-size: 8px; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+        .nav-menu { flex: 1; padding: 12px 0; overflow-y: auto; }
+        .nav-item { width: 100%; padding: 13px 22px; background: none; border: none; color: #525252; text-align: left; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; border-left: 3px solid transparent; }
+        .nav-item:hover { background: #1a1a1b; color: #b0b0b0; border-left-color: #3a3a3a; }
+        .nav-item.active { background: linear-gradient(90deg, #1e1e20, #161617); color: #e8e8e8; border-left: 3px solid var(--silver-mid); box-shadow: inset 0 0 20px rgba(210,210,210,0.03); }
+        .sidebar-footer { padding: 16px; text-align: center; font-size: 10px; color: #383838; border-top: 1px solid #1e1e1e; background: #080809; letter-spacing: 1px; }
         #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; }
         header { height: 58px; background: var(--header-bg); border-bottom: 1px solid var(--header-border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
         .header-left { display: flex; align-items: center; }
@@ -62,12 +68,12 @@
         .tab-content.active { display: block; animation: fadeIn 0.25s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
-        .card-stat { background: var(--surface); padding: 18px; border-radius: 8px; border: 1px solid var(--border); border-top: 2px solid #3a3a3a; position: relative; overflow: hidden; }
-        .card-stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #888 0%, #e8e8e8 50%, #888 100%); }
+        .card-stat { background: var(--surface); padding: 18px; border-radius: 8px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+        .card-stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--chrome-gradient); opacity: 0.7; }
         .card-stat label { display: block; font-size: 9px; font-weight: 700; color: #606060; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
         .card-stat .value { font-size: 22px; font-weight: 800; color: #e8e8e8; }
         .data-card { background: var(--surface); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 20px; }
-        .data-card-header { background: #181818; color: #c8c8c8; padding: 11px 16px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1.5px; border-bottom: 1px solid var(--border); }
+        .data-card-header { background: #131314; color: #b0b0b0; padding: 11px 16px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1.5px; border-bottom: 1px solid var(--border); }
         
         .inventory-panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
         .inv-card { background: var(--surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; position: relative; overflow: hidden; }
@@ -115,23 +121,25 @@
         .ranking-name { font-weight: 700; font-size: 12px; }
         .ranking-val { font-weight: 800; font-size: 12px; color: #a0a0a0; }
 
-        #user-overlay { position: fixed; inset: 0; background: #0a0a0a; z-index: 5000; display: flex; align-items: center; justify-content: center; background-image: radial-gradient(ellipse at 50% 50%, #1a1a1a 0%, #0a0a0a 70%); }
-        .login-box { background: #141414; padding: 36px; border-radius: 12px; width: 360px; border: 1px solid #2a2a2a; box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
-        .login-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #c8c8c8, transparent); }
-        .login-box h2 { background: linear-gradient(135deg, #c8c8c8, #ffffff, #a0a0a0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-align: center; margin-bottom: 8px; font-weight: 900; font-size: 24px; letter-spacing: 6px; font-style: normal; }
-        .login-box .login-tagline { text-align: center; font-size: 9px; color: #444; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 28px; }
-        .login-box input { width: 100%; padding: 12px 14px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #2a2a2a; background: #0e0e0e; color: #e8e8e8; font-size: 14px; font-family: inherit; transition: 0.2s; }
-        .login-box input:focus { border-color: #555; outline: none; }
-        .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg, #2a2a2a, #3a3a3a); color: #e8e8e8; border: 1px solid #444; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 12px; letter-spacing: 2px; transition: 0.2s; font-family: inherit; }
-        .login-box button:hover { background: linear-gradient(135deg, #3a3a3a, #4a4a4a); color: #fff; border-color: #666; }
-        .login-box .link-register { display: block; text-align: center; margin-top: 16px; font-size: 12px; color: #505050; }
-        .login-box .link-register a { color: #888; cursor: pointer; font-weight: 600; text-decoration: none; }
-        .login-box .link-register a:hover { color: #c8c8c8; }
-        #register-overlay { position: fixed; inset: 0; background: #0a0a0a; z-index: 5001; display: none; align-items: center; justify-content: center; background-image: radial-gradient(ellipse at 50% 50%, #1a1a1a 0%, #0a0a0a 70%); }
+        #user-overlay { position: fixed; inset: 0; background: #080809; z-index: 5000; display: flex; align-items: center; justify-content: center; background-image: radial-gradient(ellipse at 50% 40%, #181819 0%, #080809 65%); }
+        .login-box { background: #111112; padding: 40px; border-radius: 14px; width: 370px; border: 1px solid #252525; box-shadow: 0 30px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.03); position: relative; overflow: hidden; }
+        .login-box::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: var(--logo-gradient); opacity: 0.6; }
+        .login-box::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 80px; background: radial-gradient(ellipse at 50% 0%, rgba(200,200,200,0.04) 0%, transparent 70%); pointer-events: none; }
+        .login-box h2 { background: var(--logo-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-align: center; margin-bottom: 8px; font-weight: 900; font-size: 28px; letter-spacing: 8px; font-style: normal; }
+        .login-box .login-tagline { text-align: center; font-size: 9px; color: #3a3a3a; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 32px; }
+        .login-box input { width: 100%; padding: 13px 14px; margin-bottom: 12px; border-radius: 7px; border: 1px solid #252525; background: #0a0a0b; color: #e8e8e8; font-size: 14px; font-family: inherit; transition: 0.2s; }
+        .login-box input:focus { border-color: #484848; outline: none; box-shadow: 0 0 0 3px rgba(200,200,200,0.04); }
+        .login-box button { width: 100%; padding: 14px; background: linear-gradient(135deg, #222224, #2e2e30); color: #d0d0d0; border: 1px solid #3a3a3c; border-radius: 7px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 11px; letter-spacing: 3px; transition: 0.2s; font-family: inherit; position: relative; overflow: hidden; }
+        .login-box button::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #888, transparent); }
+        .login-box button:hover { background: linear-gradient(135deg, #2e2e30, #3a3a3c); color: #f0f0f0; border-color: #505052; }
+        .login-box .link-register { display: block; text-align: center; margin-top: 18px; font-size: 12px; color: #404040; }
+        .login-box .link-register a { color: #707070; cursor: pointer; font-weight: 600; text-decoration: none; }
+        .login-box .link-register a:hover { color: var(--silver-mid); }
+        #register-overlay { position: fixed; inset: 0; background: #080809; z-index: 5001; display: none; align-items: center; justify-content: center; background-image: radial-gradient(ellipse at 50% 40%, #181819 0%, #080809 65%); }
         #register-overlay.active { display: flex; }
-        .register-box { background: #141414; padding: 32px; border-radius: 12px; width: 390px; border: 1px solid #2a2a2a; box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
-        .register-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #888, transparent); }
-        .register-box h2 { background: linear-gradient(135deg, #c8c8c8, #ffffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-align: center; margin-bottom: 4px; font-weight: 900; font-size: 20px; letter-spacing: 3px; font-style: normal; }
+        .register-box { background: #111112; padding: 32px; border-radius: 14px; width: 390px; border: 1px solid #252525; box-shadow: 0 30px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.03); position: relative; overflow: hidden; }
+        .register-box::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: var(--logo-gradient); opacity: 0.5; }
+        .register-box h2 { background: var(--logo-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-align: center; margin-bottom: 4px; font-weight: 900; font-size: 20px; letter-spacing: 3px; font-style: normal; }
         .register-box p.subtitle { color: #505050; text-align: center; font-size: 11px; margin-bottom: 22px; letter-spacing: 1px; }
         .register-box input { width: 100%; padding: 11px 13px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #2a2a2a; background: #0e0e0e; color: #e8e8e8; font-size: 13px; font-family: inherit; transition: 0.2s; }
         .register-box input:focus { border-color: #555; outline: none; }
@@ -164,8 +172,8 @@
         .card-obs-preview { font-size:10px; color:#606060; background:#181818; border-top:1px dashed #2a2a2a; margin-top:5px; padding-top:4px; cursor:pointer; line-height:1.3; }
         .card-obs-preview:hover { color:#a0a0a0; }
         .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 700; font-size: 11px; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; letter-spacing: 0.5px; transition: 0.2s; }
-        .btn-main { background: linear-gradient(135deg, #2a2a2a, #3a3a3a); color: #e8e8e8; border: 1px solid #444; }
-        .btn-main:hover { background: linear-gradient(135deg, #3a3a3a, #4a4a4a); color: #fff; border-color: #666; }
+        .btn-main { background: linear-gradient(135deg, #242426, #303032); color: #d8d8d8; border: 1px solid #3e3e40; }
+        .btn-main:hover { background: linear-gradient(135deg, #303032, #3e3e40); color: #f0f0f0; border-color: #585858; }
         .btn-dark { background: #1a1a1a; color: #c8c8c8; border: 1px solid #333; }
         .btn-dark:hover { background: #222; color: #e8e8e8; }
         .btn-small { padding: 4px 8px; font-size: 10px; }
