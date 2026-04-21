@@ -212,7 +212,57 @@
         .gestor-only { display: none !important; }
         .show-gestor { display: inline-flex !important; }
         
-        .card-action { margin-top: 5px; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #1e1e1e; color: #808080; line-height: 1.4; }
+        .card-action { margin-top: 0; padding: 5px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; line-height: 1.4; display: flex; align-items: flex-start; gap: 5px; }
+        .card-action-icon { flex-shrink: 0; font-size: 11px; }
+
+        /* ── Card v2.0 TMC ── */
+        .card { background: #1c1c1e; padding: 0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.45); cursor: grab; transition: transform .15s, box-shadow .15s; border: 1px solid #252527; border-left: 3px solid #3a3a3c; overflow: hidden; position: relative; }
+        .card:hover { transform: translateY(-1px) translateX(1px); box-shadow: 0 6px 20px rgba(0,0,0,0.6); background: #202022; }
+        .card:active { cursor: grabbing; }
+        .card.dragging { opacity: 0.5; transform: rotate(2deg); }
+        .card.stagnant { border-left-color: #7f1d1d !important; }
+        .card.stagnant::after { content: '🕸️'; position: absolute; top: 6px; right: 6px; font-size: 12px; opacity: 0.35; }
+        /* status border colors */
+        .card.heat-hot  { border-left-color: #16a34a; }
+        .card.heat-warm { border-left-color: #d97706; }
+        .card.heat-cold { border-left-color: #dc2626; }
+        /* glow sutil para quentes */
+        .card.heat-hot { box-shadow: 0 2px 10px rgba(0,0,0,0.45), -2px 0 8px rgba(22,163,74,0.12); }
+
+        .card-inner { padding: 12px 13px; display: flex; flex-direction: column; gap: 8px; }
+
+        /* linha 1: status + tempo */
+        .card-row-top { display: flex; justify-content: space-between; align-items: center; }
+        .card-heat-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 2px 7px; border-radius: 20px; }
+        .card-heat-badge.hot  { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+        .card-heat-badge.warm { background: #1c1200; color: #fbbf24; border: 1px solid #78350f; }
+        .card-heat-badge.cold { background: #2a0a0a; color: #f87171; border: 1px solid #7f1d1d; }
+        .card-days-badge { font-size: 9px; font-weight: 700; color: #505050; display: flex; align-items: center; gap: 3px; }
+        .card-days-badge.urgent { color: #f87171; }
+        .card-days-badge.warn   { color: #fbbf24; }
+
+        /* linha 2: produto + valor */
+        .card-row-main { display: flex; flex-direction: column; gap: 2px; }
+        .card-product-name { font-size: 13px; font-weight: 700; color: #e0e0e0; line-height: 1.2; letter-spacing: 0.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-client-name  { font-size: 11px; font-weight: 500; color: #686868; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-value        { font-size: 16px; font-weight: 900; color: #c8c8c8; letter-spacing: -0.5px; line-height: 1; margin-top: 2px; }
+
+        /* linha 3: contexto */
+        .card-row-context { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .card-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+
+        /* linha 4: próxima ação */
+        .card-row-action { background: #111113; border-radius: 5px; padding: 6px 8px; font-size: 10px; font-weight: 700; display: flex; align-items: flex-start; gap: 5px; line-height: 1.35; }
+        .card-row-action.delayed { background: #1f0a0a; color: #f87171; }
+        .card-row-action.today   { background: #1a1100; color: #fbbf24; }
+        .card-row-action.future  { background: #0a1020; color: #60a5fa; }
+        .card-row-action.neutral { background: #111113; color: #505050; }
+
+        /* rodapé: dono + botões */
+        .card-footer { display: flex; justify-content: space-between; align-items: center; padding: 7px 13px; border-top: 1px solid #1e1e20; background: #161618; }
+        .card-owner { font-size: 10px; font-weight: 700; color: #484848; display: flex; align-items: center; gap: 5px; }
+        .card-owner-avatar { width: 18px; height: 18px; border-radius: 50%; background: #2a2a2e; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 900; color: #888; border: 1px solid #333; flex-shrink: 0; }
+        .card-footer-btns { display: flex; gap: 4px; }
         #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e1e1e; color: #c8c8c8; padding: 10px 22px; border-radius: 8px; opacity: 0; transition: .3s; z-index: 3000; font-weight: 600; font-size: 12px; border: 1px solid #333; box-shadow: 0 4px 20px rgba(0,0,0,0.5); letter-spacing: 0.5px; }
 
         /* ── Dropdown Ações Funil ── */
@@ -1544,83 +1594,99 @@
                     const list = div.querySelector('.kanban-list');
 
                     items.forEach(d => {
-                        // Stagnant
+                        // ── Calcula dias sem movimentação ──
                         let lastActionDate = new Date(d.created_at||Date.now()).getTime();
                         if(d.history && d.history.length > 0) {
-                            const moves = d.history.filter(h => h.action === 'Movimentação' || h.action === 'Criação');
+                            const moves = d.history.filter(h => h.action === 'Movimentação' || h.action === 'Criação' || h.action === 'Observação' || h.action === 'Agenda');
                             if(moves.length > 0) lastActionDate = new Date(moves[moves.length-1].date).getTime();
                         }
-                        const isStagnant = APP.daysDiff(lastActionDate) > 25 && !['ganho','perdido'].includes(d.stage);
+                        const diasParado = APP.daysDiff(lastActionDate);
+                        const isStagnant = diasParado > 25 && !['ganho','perdido'].includes(d.stage);
 
-                        // Produto
-                        let productDisplay = '';
+                        // ── Lógica de calor ──
+                        let heat = 'hot', heatLabel = '🟢 Quente', heatClass = 'hot';
+                        if (!['ganho','perdido'].includes(d.stage)) {
+                            if (diasParado >= 5) { heat = 'cold'; heatLabel = '🔴 Travado'; heatClass = 'cold'; }
+                            else if (diasParado >= 2) { heat = 'warm'; heatLabel = '🟡 Atenção'; heatClass = 'warm'; }
+                        }
+
+                        // ── Badge de dias ──
+                        let daysBadgeClass = diasParado >= 5 ? 'urgent' : diasParado >= 2 ? 'warn' : '';
+                        let daysLabel = diasParado === 0 ? 'hoje' : diasParado === 1 ? '1d' : `${diasParado}d`;
+
+                        // ── Produto ──
+                        let productName = '', productTag = '', clientLabel = d.client || '';
                         if(d.stock_id) {
                             const s = APP.data.stock.find(x => x.id == d.stock_id);
-                            const typeIcon  = d.deal_type === 'implemento' ? '🔧' : d.deal_type === 'outros' ? '📦' : '🚜';
-                            const typeBg    = d.deal_type === 'implemento' ? '#0f2340' : d.deal_type === 'outros' ? '#1a1030' : '#1a1a1a';
-                            const typeBorder= d.deal_type === 'implemento' ? '#1e3a5f' : d.deal_type === 'outros' ? '#2e1a4a' : '#333';
-                            const typeColor = d.deal_type === 'implemento' ? '#60a5fa' : d.deal_type === 'outros' ? '#a78bfa' : '#d0d0d0';
-                            productDisplay = s
-                                ? `<div style="font-size:10px; font-weight:700; color:${typeColor}; background:${typeBg}; padding:2px 6px; border-radius:3px; display:inline-block; border:1px solid ${typeBorder}; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${typeIcon} ${s.model}</div>`
-                                : `<div style="font-size:10px; font-weight:700; color:#555; background:#161616; padding:2px 6px; border-radius:3px; display:inline-block; border:1px solid #2a2a2a;">${typeIcon} Sem estoque</div>`;
+                            const typeIcon = d.deal_type === 'implemento' ? '🔧' : d.deal_type === 'outros' ? '📦' : '🚜';
+                            productName = s ? `${typeIcon} ${s.model}` : `${typeIcon} Sem estoque`;
+                            const tagColor = d.deal_type === 'implemento' ? {bg:'#0f2340',c:'#60a5fa',b:'#1e3a5f'} : d.deal_type === 'outros' ? {bg:'#1a1030',c:'#a78bfa',b:'#2e1a4a'} : {bg:'#1a1a1a',c:'#d0d0d0',b:'#333'};
+                            if(s) productTag = `<span class="card-tag" style="background:${tagColor.bg};color:${tagColor.c};border:1px solid ${tagColor.b};">${s.mono || s.type || ''}</span>`;
                         } else if(d.deal_type === 'consorcio') {
-                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#34d399; background:#042f1e; padding:2px 6px; border-radius:3px; display:inline-block; border:1px solid #065f46;">📄 Consórcio</div>`;
+                            productName = '📄 Consórcio';
+                            productTag = `<span class="card-tag" style="background:#042f1e;color:#34d399;border:1px solid #065f46;">Consórcio</span>`;
                         } else {
                             const typeIcon = d.deal_type === 'implemento' ? '🔧' : d.deal_type === 'outros' ? '📦' : '🚜';
-                            productDisplay = `<div style="font-size:10px; font-weight:700; color:#555; background:#161616; padding:2px 6px; border-radius:3px; display:inline-block; border:1px solid #2a2a2a;">${typeIcon} Sem estoque</div>`;
+                            productName = `${typeIcon} Sem produto`;
                         }
 
-                        // Próxima ação
+                        // ── Fonte do negócio como contexto ──
+                        let sourceTag = '';
+                        if(d.source) sourceTag = `<span class="card-tag" style="background:#1a1a1a;color:#484848;border:1px solid #2a2a2a;">${d.source}</span>`;
+
+                        // ── Próxima ação ──
                         let actionHtml = '';
                         if(d.stage === 'perdido' && d.next_desc && d.next_desc.includes('PERDA')) {
-                            actionHtml = `<div class="card-action" style="color:#991b1b; background:#fee2e2;">${d.next_desc}</div>`;
+                            actionHtml = `<div class="card-row-action neutral">⛔ ${d.next_desc}</div>`;
                         } else if(d.next_date) {
                             const isDelay = d.next_date < today;
-                            const isToday = d.next_date === today;
-                            const color = isDelay ? '#ef4444' : isToday ? '#d97706' : '#2563eb';
-                            const bg = isDelay ? '#fee2e2' : isToday ? '#fef3c7' : '#eff6ff';
-                            actionHtml = `<div class="card-action" style="color:${color}; background:${bg};">📅 ${d.next_date.split('-').reverse().join('/')}${d.next_desc ? ' — ' + d.next_desc : ''}</div>`;
+                            const isToday2 = d.next_date === today;
+                            const cls = isDelay ? 'delayed' : isToday2 ? 'today' : 'future';
+                            const ico = isDelay ? '🔥' : isToday2 ? '⚡' : '📅';
+                            const dateStr = d.next_date.split('-').reverse().join('/');
+                            actionHtml = `<div class="card-row-action ${cls}">${ico} ${d.next_desc ? d.next_desc : dateStr}</div>`;
+                        } else {
+                            // sem ação agendada = alerta sutil
+                            actionHtml = `<div class="card-row-action neutral">— Sem ação agendada</div>`;
                         }
 
-                        // Observações internas — texto colapsável, sem ícone, separado visualmente do histórico
-                        const lastObsCard = d.history ? [...d.history].reverse().find(h => h.action === 'Observação') : null;
-                        let obsHtml = '';
-                        if(lastObsCard && lastObsCard.detail) {
-                            const d_obs = lastObsCard.detail;
-                            const obsId = 'obs-' + d.id;
-                            const isTruncated = d_obs.length > 55;
-                            const preview = isTruncated ? d_obs.slice(0, 55) + '...' : d_obs;
-                            obsHtml = `<div class="card-obs-preview" data-obs-full="${encodeURIComponent(d_obs)}" data-obs-id="${obsId}" data-expanded="false" onclick="event.stopPropagation(); APP.toggleObs(this)">
-                                <span style="color:#9ca3af; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:2px;">📝 nota interna <span class="obs-arrow">▾</span></span>
-                                <span class="obs-text">${preview}</span>
-                            </div>`;
-                        }
+                        // ── Avatar inicial do dono ──
+                        const ownerName = d.owner || '';
+                        const ownerInitials = ownerName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
 
-                        // Botão excluir
+                        // ── Botões ──
                         const delBtn = APP.user.role === 'gestor' ? `<button onclick="event.stopPropagation(); APP.deleteDeal('${d.id}')" class="btn-card-icon" title="Excluir">🗑️</button>` : '';
-                        const dupBtn = `<button onclick="event.stopPropagation(); APP.duplicateDeal('${d.id}')" class="btn-card-icon" title="Duplicar negócio">📋</button>`;
+                        const dupBtn = `<button onclick="event.stopPropagation(); APP.duplicateDeal('${d.id}')" class="btn-card-icon" title="Duplicar">📋</button>`;
+                        const histBtn = `<button onclick="event.stopPropagation(); APP.viewHistory('${d.id}', 'deal')" class="btn-card-icon" title="Histórico">📜</button>`;
 
                         const card = document.createElement('div');
-                        card.className = `card ${isStagnant ? 'stagnant' : ''}${APP.selectedDealIds.has(String(d.id)) ? ' bulk-selected' : ''}`;
+                        card.className = `card heat-${heatClass} ${isStagnant ? 'stagnant' : ''}${APP.selectedDealIds.has(String(d.id)) ? ' bulk-selected' : ''}`;
                         card.dataset.dealId = d.id;
                         card.draggable = true;
                         card.innerHTML = `
                             <div class="card-checkbox-wrap"><input type="checkbox" class="bulk-cb" ${APP.selectedDealIds.has(String(d.id)) ? 'checked' : ''} onclick="event.stopPropagation(); APP.toggleDealSelect('${d.id}', this.checked)"></div>
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:4px; margin-bottom:6px;">
-                                <div style="font-weight:800; font-size:13px; color:#e8e8e8; line-height:1.2; flex:1; letter-spacing:0.1px;">${d.client}</div>
-                                <div class="card-btn-group" style="flex-shrink:0;">
-                                    <button class="btn-card-icon" onclick="event.stopPropagation(); APP.viewHistory('${d.id}', 'deal')" title="Histórico">📜</button>
-                                    ${dupBtn}
-                                    ${delBtn}
+                            <div class="card-inner">
+                                <div class="card-row-top">
+                                    <span class="card-heat-badge ${heatClass}">${heatLabel}</span>
+                                    <span class="card-days-badge ${daysBadgeClass}">⏱ ${daysLabel}</span>
+                                </div>
+                                <div class="card-row-main">
+                                    <div class="card-product-name">${productName}</div>
+                                    <div class="card-client-name">${clientLabel}</div>
+                                    <div class="card-value">${fmt(d.value||0)}</div>
+                                </div>
+                                ${(productTag || sourceTag) ? `<div class="card-row-context">${productTag}${sourceTag}</div>` : ''}
+                                ${actionHtml}
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-owner">
+                                    <div class="card-owner-avatar">${ownerInitials}</div>
+                                    ${ownerName.split(' ')[0]}
+                                </div>
+                                <div class="card-footer-btns">
+                                    ${histBtn}${dupBtn}${delBtn}
                                 </div>
                             </div>
-                            <div style="margin-bottom:6px;">${productDisplay}</div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:${actionHtml || obsHtml ? '6px' : '0'};">
-                                <div style="font-size:9px; color:#484848; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">${d.owner || ''}</div>
-                                <div style="font-weight:900; font-size:14px; color:#c8c8c8; white-space:nowrap; letter-spacing:-0.3px;">${fmt(d.value||0)}</div>
-                            </div>
-                            ${actionHtml}
-                            ${obsHtml}
                         `;
                         card.onclick = () => APP.editDeal(d.id);
                         card.ondragstart = () => { APP.dragId = d.id; card.classList.add('dragging'); };
