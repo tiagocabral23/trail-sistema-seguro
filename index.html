@@ -100,7 +100,27 @@
         .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #374151; background: #111827; color: #fff; }
         .login-box button { width: 100%; padding: 12px; background: #fbbf24; color: #000; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         .login-box button:hover { background: #f59e0b; }
-        
+        .login-box .link-register { display: block; text-align: center; margin-top: 14px; font-size: 12px; color: #9ca3af; }
+        .login-box .link-register a { color: #fbbf24; cursor: pointer; font-weight: 700; text-decoration: none; }
+        .login-box .link-register a:hover { color: #f59e0b; text-decoration: underline; }
+        #register-overlay { position: fixed; inset: 0; background: #111827; z-index: 5001; display: none; align-items: center; justify-content: center; }
+        #register-overlay.active { display: flex; }
+        .register-box { background: #1f2937; padding: 30px; border-radius: 10px; width: 380px; border-top: 4px solid #10b981; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .register-box h2 { color: #10b981; text-align: center; margin-bottom: 6px; font-style: italic; font-weight: 900; }
+        .register-box p.subtitle { color: #6b7280; text-align: center; font-size: 12px; margin-bottom: 20px; }
+        .register-box input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #374151; background: #111827; color: #fff; font-size: 14px; }
+        .register-box input:focus { border-color: #10b981; outline: none; }
+        .register-box .btn-register { width: 100%; padding: 12px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 13px; transition: 0.2s; }
+        .register-box .btn-register:hover { background: #059669; }
+        .register-box .btn-register:disabled { background: #374151; color: #6b7280; cursor: not-allowed; }
+        .register-box .link-login { display: block; text-align: center; margin-top: 14px; font-size: 12px; color: #9ca3af; }
+        .register-box .link-login a { color: #fbbf24; cursor: pointer; font-weight: 700; text-decoration: none; }
+        .register-box .link-login a:hover { color: #f59e0b; text-decoration: underline; }
+        .register-box .reg-error { color: #ef4444; font-size: 12px; margin-top: 8px; text-align: center; display: none; font-weight: bold; }
+        .register-box .reg-success { color: #10b981; font-size: 12px; margin-top: 8px; text-align: center; display: none; font-weight: bold; }
+        .register-box hr { border: none; border-top: 1px solid #374151; margin: 14px 0; }
+        .register-box .field-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #6b7280; display: block; margin-bottom: 4px; }
+
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: none; align-items: center; justify-content: center; z-index: 2000; }
         .modal.active { display: flex; }
         .modal-box { background: var(--surface); width: 450px; padding: 25px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
@@ -206,6 +226,28 @@
                 <button type="submit" id="login-btn">Entrar no Sistema</button>
                 <div id="login-error" style="color:#ef4444;font-size:12px;margin-top:10px;text-align:center;display:none;font-weight:bold;">Credenciais inválidas.</div>
             </form>
+            <div class="link-register">Novo por aqui? <a onclick="APP.showRegister()">Cadastrar nova empresa</a></div>
+        </div>
+    </div>
+
+    <!-- TELA DE CADASTRO DE NOVA EMPRESA -->
+    <div id="register-overlay">
+        <div class="register-box">
+            <h2>🌱 Nova Empresa</h2>
+            <p class="subtitle">Crie sua conta e comece a usar o Trail System agora</p>
+            <label class="field-label">Nome da Empresa</label>
+            <input type="text" id="reg-company" placeholder="Ex: Agro Minas Distribuidora" required>
+            <hr>
+            <label class="field-label">Seu Nome (Administrador)</label>
+            <input type="text" id="reg-name" placeholder="Seu nome completo" required>
+            <label class="field-label">E-mail de Acesso</label>
+            <input type="email" id="reg-email" placeholder="seu@email.com.br" required>
+            <label class="field-label">Senha (mínimo 6 caracteres)</label>
+            <input type="password" id="reg-password" placeholder="Crie uma senha segura" required>
+            <button class="btn-register" id="reg-btn" onclick="APP.registerCompany()">Criar Minha Empresa</button>
+            <div class="reg-error" id="reg-error"></div>
+            <div class="reg-success" id="reg-success"></div>
+            <div class="link-login">Já tem conta? <a onclick="APP.showLogin()">Fazer login</a></div>
         </div>
     </div>
 
@@ -970,6 +1012,103 @@
                 }
                 
                 setTimeout(() => APP.loadUser(data.user), 500);
+            },
+
+            showRegister: () => {
+                document.getElementById('user-overlay').style.display = 'none';
+                document.getElementById('register-overlay').classList.add('active');
+                document.getElementById('reg-error').style.display = 'none';
+                document.getElementById('reg-success').style.display = 'none';
+            },
+
+            showLogin: () => {
+                document.getElementById('register-overlay').classList.remove('active');
+                document.getElementById('user-overlay').style.display = 'flex';
+                document.getElementById('login-btn').innerText = 'Entrar no Sistema';
+                document.getElementById('login-error').style.display = 'none';
+            },
+
+            registerCompany: async () => {
+                const companyName = document.getElementById('reg-company').value.trim();
+                const userName    = document.getElementById('reg-name').value.trim();
+                const email       = document.getElementById('reg-email').value.trim();
+                const password    = document.getElementById('reg-password').value;
+                const btn         = document.getElementById('reg-btn');
+                const errEl       = document.getElementById('reg-error');
+                const okEl        = document.getElementById('reg-success');
+
+                errEl.style.display = 'none';
+                okEl.style.display  = 'none';
+
+                if (!companyName || !userName || !email || !password) {
+                    errEl.textContent = 'Preencha todos os campos.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+                if (password.length < 6) {
+                    errEl.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Criando conta...';
+
+                try {
+                    // 1. Cria usuário no Supabase Auth
+                    const { data: authData, error: authErr } = await dbClient.auth.signUp({ email, password });
+                    if (authErr) throw new Error(authErr.message);
+
+                    const authUser = authData.user;
+                    if (!authUser) throw new Error('Falha ao criar autenticação. Tente novamente.');
+
+                    // 2. Gera slug único a partir do nome da empresa
+                    const baseSlug = companyName
+                        .toLowerCase()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // remove acentos
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-|-$/g, '');
+                    const uniqueSlug = baseSlug + '-' + Math.random().toString(36).substring(2, 7);
+
+                    // 3. Cria registro na tabela companies
+                    const { data: companyData, error: companyErr } = await dbClient
+                        .from('companies')
+                        .insert({
+                            name: companyName,
+                            slug: uniqueSlug,
+                            plan: 'trial'
+                        })
+                        .select()
+                        .single();
+                    if (companyErr) throw new Error('Erro ao criar empresa: ' + companyErr.message);
+
+                    const companyId = companyData.id;
+
+                    // 3. Cria perfil gestor na tabela users
+                    const { error: userErr } = await dbClient.from('users').insert({
+                        name:       userName,
+                        auth_id:    authUser.id,
+                        role:       'gestor',
+                        company_id: companyId,
+                        goal:       0
+                    });
+                    if (userErr) throw new Error('Erro ao criar perfil: ' + userErr.message);
+
+                    // Sucesso
+                    okEl.textContent = '✅ Empresa criada! Verifique seu e-mail para confirmar o acesso e depois faça login.';
+                    okEl.style.display = 'block';
+                    btn.textContent = 'Conta Criada!';
+                    document.getElementById('reg-company').value = '';
+                    document.getElementById('reg-name').value    = '';
+                    document.getElementById('reg-email').value   = '';
+                    document.getElementById('reg-password').value = '';
+
+                } catch (err) {
+                    errEl.textContent = err.message;
+                    errEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Criar Minha Empresa';
+                }
             },
 
             loadUser: async (authUser) => {
