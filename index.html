@@ -1055,19 +1055,7 @@
                 btn.textContent = 'Criando conta...';
 
                 try {
-                    // 1. Cria usuário no Supabase Auth
-                    const { data: authData, error: authErr } = await dbClient.auth.signUp({ email, password });
-                    if (authErr) throw new Error(authErr.message);
-
-                    const authUser = authData.user;
-                    if (!authUser) throw new Error('Falha ao criar autenticação. Tente novamente.');
-
-                    // 2. Faz login imediato para estabelecer sessão (necessário para RLS)
-                    btn.textContent = 'Configurando conta...';
-                    const { error: signInErr } = await dbClient.auth.signInWithPassword({ email, password });
-                    if (signInErr) throw new Error('Erro ao iniciar sessão: ' + signInErr.message);
-
-                    // 3. Gera slug único a partir do nome da empresa
+                    // 1. Gera slug único (sem sessão ainda — usuário é anon)
                     const baseSlug = companyName
                         .toLowerCase()
                         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -1075,21 +1063,31 @@
                         .replace(/^-|-$/g, '');
                     const uniqueSlug = baseSlug + '-' + Math.random().toString(36).substring(2, 7);
 
-                    // 4. Cria registro na tabela companies
+                    // 2. Cria empresa como ANON (antes de qualquer auth — política permite)
+                    btn.textContent = 'Criando empresa...';
                     const { data: companyData, error: companyErr } = await dbClient
                         .from('companies')
-                        .insert({
-                            name: companyName,
-                            slug: uniqueSlug,
-                            plan: 'trial'
-                        })
+                        .insert({ name: companyName, slug: uniqueSlug, plan: 'trial' })
                         .select()
                         .single();
                     if (companyErr) throw new Error('Erro ao criar empresa: ' + companyErr.message);
 
                     const companyId = companyData.id;
 
-                    // 5. Cria perfil gestor na tabela users
+                    // 3. Cria usuário no Supabase Auth
+                    btn.textContent = 'Criando acesso...';
+                    const { data: authData, error: authErr } = await dbClient.auth.signUp({ email, password });
+                    if (authErr) throw new Error(authErr.message);
+
+                    const authUser = authData.user;
+                    if (!authUser) throw new Error('Falha ao criar autenticação. Tente novamente.');
+
+                    // 4. Faz login para estabelecer sessão
+                    btn.textContent = 'Configurando conta...';
+                    const { error: signInErr } = await dbClient.auth.signInWithPassword({ email, password });
+                    if (signInErr) throw new Error('Erro ao iniciar sessão: ' + signInErr.message);
+
+                    // 5. Cria perfil gestor (agora autenticado)
                     const { error: userErr } = await dbClient.from('users').insert({
                         name:       userName,
                         auth_id:    authUser.id,
@@ -1109,7 +1107,6 @@
                     errEl.style.display = 'block';
                     btn.disabled = false;
                     btn.textContent = 'Criar Minha Empresa';
-                    // Faz logout se algo deu errado após o signIn
                     await dbClient.auth.signOut();
                 }
             },
