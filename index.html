@@ -1062,15 +1062,20 @@
                     const authUser = authData.user;
                     if (!authUser) throw new Error('Falha ao criar autenticação. Tente novamente.');
 
-                    // 2. Gera slug único a partir do nome da empresa
+                    // 2. Faz login imediato para estabelecer sessão (necessário para RLS)
+                    btn.textContent = 'Configurando conta...';
+                    const { error: signInErr } = await dbClient.auth.signInWithPassword({ email, password });
+                    if (signInErr) throw new Error('Erro ao iniciar sessão: ' + signInErr.message);
+
+                    // 3. Gera slug único a partir do nome da empresa
                     const baseSlug = companyName
                         .toLowerCase()
-                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // remove acentos
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                         .replace(/[^a-z0-9]+/g, '-')
                         .replace(/^-|-$/g, '');
                     const uniqueSlug = baseSlug + '-' + Math.random().toString(36).substring(2, 7);
 
-                    // 3. Cria registro na tabela companies
+                    // 4. Cria registro na tabela companies
                     const { data: companyData, error: companyErr } = await dbClient
                         .from('companies')
                         .insert({
@@ -1084,7 +1089,7 @@
 
                     const companyId = companyData.id;
 
-                    // 3. Cria perfil gestor na tabela users
+                    // 5. Cria perfil gestor na tabela users
                     const { error: userErr } = await dbClient.from('users').insert({
                         name:       userName,
                         auth_id:    authUser.id,
@@ -1094,20 +1099,18 @@
                     });
                     if (userErr) throw new Error('Erro ao criar perfil: ' + userErr.message);
 
-                    // Sucesso
-                    okEl.textContent = '✅ Empresa criada! Verifique seu e-mail para confirmar o acesso e depois faça login.';
-                    okEl.style.display = 'block';
-                    btn.textContent = 'Conta Criada!';
-                    document.getElementById('reg-company').value = '';
-                    document.getElementById('reg-name').value    = '';
-                    document.getElementById('reg-email').value   = '';
-                    document.getElementById('reg-password').value = '';
+                    // 6. Sucesso — carrega o sistema direto
+                    btn.textContent = 'Entrando...';
+                    document.getElementById('register-overlay').classList.remove('active');
+                    APP.loadUser(authUser);
 
                 } catch (err) {
                     errEl.textContent = err.message;
                     errEl.style.display = 'block';
                     btn.disabled = false;
                     btn.textContent = 'Criar Minha Empresa';
+                    // Faz logout se algo deu errado após o signIn
+                    await dbClient.auth.signOut();
                 }
             },
 
