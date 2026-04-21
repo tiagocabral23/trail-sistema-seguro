@@ -1503,7 +1503,7 @@
                             if (err1) console.error("Erro ao atualizar cidade do cliente", err1);
                         }
                     } else {
-                        const { error: err2 } = await dbClient.from('clients').insert({ name: clientName, obs: cityInput });
+                        const { error: err2 } = await dbClient.from('clients').insert({ name: clientName, obs: cityInput, company_id: APP.user.company_id });
                         if (err2) console.error("Erro ao criar novo cliente", err2);
                     }
                 }
@@ -1548,6 +1548,7 @@
                     if(error) return alert("Erro ao atualizar oportunidade: " + error.message);
                 } else {
                     dealData.stage = 'prospeccao';
+                    dealData.company_id = APP.user.company_id;
                     dealData.history = [{date: new Date().toISOString(), user: APP.user.name, action: 'Criação', detail: 'Oportunidade criada'}];
                     if(dealData.next_date) {
                         const dateBr = dealData.next_date.split('-').reverse().join('/');
@@ -1638,6 +1639,7 @@
                     stage:     'prospeccao',
                     next_date: d.next_date || null,
                     next_desc: d.next_desc || null,
+                    company_id: APP.user.company_id,
                     history:   [{ date: new Date().toISOString(), user: APP.user.name, action: 'Criação', detail: `Duplicado do negócio de ${d.client}` }]
                 };
                 const { error } = await dbClient.from('deals').insert(clone);
@@ -1822,6 +1824,7 @@
                     if (error) return alert("Erro ao atualizar estoque: " + error.message);
                 } else {
                     s.status = 'Disponível'; s.date_entry = new Date().toISOString(); s.history = [{date:new Date().toISOString(),user:APP.user.name,action:'Criação',detail:'Manual'}];
+                    s.company_id = APP.user.company_id;
                     const { error } = await dbClient.from('stock').insert(s);
                     if (error) return alert("Erro ao inserir estoque: " + error.message);
                 }
@@ -2023,6 +2026,7 @@
                     ...r,
                     status: 'Disponível',
                     date_entry: now,
+                    company_id: APP.user.company_id,
                     history: [{ date: now, user: APP.user.name, action: 'Importação', detail: `Importado via planilha` }]
                 }));
 
@@ -2206,7 +2210,7 @@
                 const BATCH = 50;
                 let total = 0;
                 for (let i = 0; i < APP._funilImportRows.length; i += BATCH) {
-                    const batch = APP._funilImportRows.slice(i, i + BATCH);
+                    const batch = APP._funilImportRows.slice(i, i + BATCH).map(r => ({...r, company_id: APP.user.company_id}));
                     const { error } = await dbClient.from('deals').insert(batch);
                     if (error) {
                         alert(`Erro ao importar lote ${Math.floor(i/BATCH)+1}: ${error.message}`);
@@ -2278,7 +2282,7 @@
                     const { error } = await dbClient.from('clients').update(c).eq('id',id);
                     if (error) return alert("Erro ao atualizar cliente: " + error.message);
                 } else {
-                    const { error } = await dbClient.from('clients').insert(c);
+                    const { error } = await dbClient.from('clients').insert({...c, company_id: APP.user.company_id});
                     if (error) return alert("Erro ao cadastrar cliente: " + error.message);
                 }
                 APP.closeModals(); 
@@ -2343,7 +2347,7 @@
                             return;
                         }
                     }
-                    const { error } = await dbClient.from('users').insert(u);
+                    const { error } = await dbClient.from('users').insert({...u, company_id: APP.user.company_id});
                     if (error) return alert("Erro ao cadastrar utilizador: " + error.message);
                 }
                 APP.closeModals(); APP.toast("Utilizador Salvo!"); await APP.reloadTable('users');
