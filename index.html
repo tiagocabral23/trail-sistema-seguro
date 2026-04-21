@@ -1055,7 +1055,10 @@
                 btn.textContent = 'Criando conta...';
 
                 try {
-                    // 1. Gera slug único (sem sessão ainda — usuário é anon)
+                    // 1. Garante que não há sessão ativa (para o insert chegar como anon)
+                    await dbClient.auth.signOut();
+
+                    // 2. Gera slug único
                     const baseSlug = companyName
                         .toLowerCase()
                         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -1063,18 +1066,32 @@
                         .replace(/^-|-$/g, '');
                     const uniqueSlug = baseSlug + '-' + Math.random().toString(36).substring(2, 7);
 
-                    // 2. Cria empresa como ANON (antes de qualquer auth — política permite)
+                    // 3. Cria empresa via REST direto como anon (sem JWT de usuário)
                     btn.textContent = 'Criando empresa...';
-                    const { data: companyData, error: companyErr } = await dbClient
-                        .from('companies')
-                        .insert({ name: companyName, slug: uniqueSlug, plan: 'trial' })
-                        .select()
-                        .single();
-                    if (companyErr) throw new Error('Erro ao criar empresa: ' + companyErr.message);
+                    const supabaseUrl  = dbClient.supabaseUrl;
+                    const supabaseAnon = dbClient.supabaseKey;
 
-                    const companyId = companyData.id;
+                    const restResp = await fetch(`${supabaseUrl}/rest/v1/companies`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': supabaseAnon,
+                            'Authorization': `Bearer ${supabaseAnon}`,
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({ name: companyName, slug: uniqueSlug, plan: 'trial' })
+                    });
 
-                    // 3. Cria usuário no Supabase Auth
+                    if (!restResp.ok) {
+                        const errBody = await restResp.json().catch(() => ({}));
+                        throw new Error('Erro ao criar empresa: ' + (errBody.message || restResp.statusText));
+                    }
+
+                    const companyArr = await restResp.json();
+                    const companyId  = companyArr[0]?.id;
+                    if (!companyId) throw new Error('Empresa criada mas sem ID retornado.');
+
+                    // 4. Cria usuário no Auth
                     btn.textContent = 'Criando acesso...';
                     const { data: authData, error: authErr } = await dbClient.auth.signUp({ email, password });
                     if (authErr) throw new Error(authErr.message);
@@ -1082,12 +1099,12 @@
                     const authUser = authData.user;
                     if (!authUser) throw new Error('Falha ao criar autenticação. Tente novamente.');
 
-                    // 4. Faz login para estabelecer sessão
+                    // 5. Faz login para estabelecer sessão
                     btn.textContent = 'Configurando conta...';
                     const { error: signInErr } = await dbClient.auth.signInWithPassword({ email, password });
                     if (signInErr) throw new Error('Erro ao iniciar sessão: ' + signInErr.message);
 
-                    // 5. Cria perfil gestor (agora autenticado)
+                    // 6. Cria perfil gestor (agora autenticado)
                     const { error: userErr } = await dbClient.from('users').insert({
                         name:       userName,
                         auth_id:    authUser.id,
@@ -1097,7 +1114,7 @@
                     });
                     if (userErr) throw new Error('Erro ao criar perfil: ' + userErr.message);
 
-                    // 6. Sucesso — carrega o sistema direto
+                    // 7. Sucesso
                     btn.textContent = 'Entrando...';
                     document.getElementById('register-overlay').classList.remove('active');
                     APP.loadUser(authUser);
